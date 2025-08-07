@@ -18,39 +18,46 @@ import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Save, User, MapPin, Building, CreditCard, FileText, Shield, Briefcase, Calculator, Upload } from "lucide-react";
 
 const employeeSchema = z.object({
+  // Backend Required Fields
+  employeeId: z.string().min(1, "Employee ID is required"),
+  companyId: z.string().min(1, "Company ID is required"),
+  joinDate: z.string().min(1, "Join date is required"),
+  salary: z.string().min(1, "Salary is required"),
+  
   // Basic Information
   name: z.string().min(2, "Full name must be at least 2 characters"),
-  gender: z.enum(["male", "female", "other"]),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
-  maritalStatus: z.enum(["single", "married", "divorced", "widowed"]),
-  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   email: z.string().email("Invalid email address"),
-  aadhaarNumber: z.string().min(12, "Aadhaar number must be 12 digits"),
-  panNumber: z.string().min(10, "PAN number must be 10 characters"),
-  bloodGroup: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  designation: z.string().min(2, "Designation is required"),
+  departmentId: z.string().min(1, "Department is required"),
+  
+  // Optional Fields
+  gender: z.enum(["male", "female", "other"]).optional(),
+  dateOfBirth: z.string().optional(),
+  maritalStatus: z.enum(["single", "married", "divorced", "widowed"]).optional(),
+  aadhaarNumber: z.string().optional(),
+  panNumber: z.string().optional(),
+  bloodGroup: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
   
   // Address Details
-  currentAddress: z.string().min(10, "Current address is required"),
-  permanentAddress: z.string().min(10, "Permanent address is required"),
-  city: z.string().min(2, "City is required"),
-  state: z.string().min(2, "State is required"),
-  pinCode: z.string().min(6, "Pin code must be 6 digits"),
+  currentAddress: z.string().optional(),
+  permanentAddress: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  pinCode: z.string().optional(),
   
   // Company Details
-  departmentId: z.string().min(1, "Department is required"),
-  designation: z.string().min(2, "Designation is required"),
   reportingManagerId: z.string().optional(),
-  joiningDate: z.string().min(1, "Joining date is required"),
-  workLocation: z.string().min(2, "Work location is required"),
-  employmentType: z.enum(["permanent", "contractual", "intern"]),
-  shiftType: z.enum(["day", "night", "flexible"]),
+  workLocation: z.string().optional(),
+  employmentType: z.enum(["permanent", "contractual", "intern"]).optional(),
+  shiftType: z.enum(["day", "night", "flexible"]).optional(),
   
   // Bank Details
-  bankName: z.string().min(2, "Bank name is required"),
-  accountHolderName: z.string().min(2, "Account holder name is required"),
-  accountNumber: z.string().min(8, "Account number is required"),
-  ifscCode: z.string().min(11, "IFSC code must be 11 characters"),
-  branch: z.string().min(2, "Branch is required"),
+  bankName: z.string().optional(),
+  accountHolderName: z.string().optional(),
+  accountNumber: z.string().optional(),
+  ifscCode: z.string().optional(),
+  branch: z.string().optional(),
   upiId: z.string().optional(),
   
   // Statutory Details
@@ -60,16 +67,16 @@ const employeeSchema = z.object({
   ptApplicable: z.boolean().default(false),
   lwfApplicable: z.boolean().default(false),
   
-  // Salary Structure
-  basicSalary: z.number().min(0, "Basic salary must be positive"),
-  hra: z.number().min(0, "HRA must be positive"),
-  specialAllowance: z.number().min(0, "Special allowance must be positive"),
-  conveyanceAllowance: z.number().min(0, "Conveyance allowance must be positive"),
-  medicalAllowance: z.number().min(0, "Medical allowance must be positive"),
-  overtimeRate: z.number().min(0, "Overtime rate must be positive"),
+  // Salary Components
+  basicSalary: z.number().min(0, "Basic salary must be positive").optional(),
+  hra: z.number().min(0, "HRA must be positive").optional(),
+  specialAllowance: z.number().min(0, "Special allowance must be positive").optional(),
+  conveyanceAllowance: z.number().min(0, "Conveyance allowance must be positive").optional(),
+  medicalAllowance: z.number().min(0, "Medical allowance must be positive").optional(),
+  overtimeRate: z.number().min(0, "Overtime rate must be positive").optional(),
   
   // System & Access
-  officialEmail: z.string().email("Invalid official email"),
+  officialEmail: z.string().email("Invalid official email").optional(),
   officialPhone: z.string().optional(),
   biometricId: z.string().optional(),
 });
@@ -98,6 +105,15 @@ export default function AddEmployee() {
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
+      employeeId: "",
+      companyId: "default-company", // Will be set from user session
+      joinDate: "",
+      salary: "",
+      name: "",
+      email: "",
+      phone: "",
+      designation: "",
+      departmentId: "",
       gender: "male",
       maritalStatus: "single",
       employmentType: "permanent",
@@ -115,7 +131,21 @@ export default function AddEmployee() {
 
   const createEmployeeMutation = useMutation({
     mutationFn: async (data: EmployeeFormData) => {
-      const response = await apiRequest("POST", "/api/employees", data);
+      // Calculate total salary from components
+      const totalSalary = (data.basicSalary || 0) + (data.hra || 0) + 
+                         (data.specialAllowance || 0) + (data.conveyanceAllowance || 0) + 
+                         (data.medicalAllowance || 0);
+      
+      // Prepare data for backend
+      const employeeData = {
+        ...data,
+        salary: totalSalary > 0 ? totalSalary.toString() : data.salary,
+        joinDate: data.joinDate,
+        employeeId: data.employeeId,
+        companyId: data.companyId
+      };
+      
+      const response = await apiRequest("POST", "/api/employees", employeeData);
       return await response.json();
     },
     onSuccess: () => {
@@ -141,8 +171,8 @@ export default function AddEmployee() {
 
   const calculateGrossSalary = () => {
     const values = form.getValues();
-    return values.basicSalary + values.hra + values.specialAllowance + 
-           values.conveyanceAllowance + values.medicalAllowance;
+    return (values.basicSalary || 0) + (values.hra || 0) + (values.specialAllowance || 0) + 
+           (values.conveyanceAllowance || 0) + (values.medicalAllowance || 0);
   };
 
   return (
@@ -215,6 +245,20 @@ export default function AddEmployee() {
                   <CardDescription>Personal details and contact information</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="employeeId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Employee ID *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter employee ID (e.g., EMP001)" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="name"
@@ -292,7 +336,7 @@ export default function AddEmployee() {
 
                   <FormField
                     control={form.control}
-                    name="phoneNumber"
+                    name="phone"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Phone Number *</FormLabel>
@@ -538,7 +582,7 @@ export default function AddEmployee() {
 
                   <FormField
                     control={form.control}
-                    name="joiningDate"
+                    name="joinDate"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Joining Date *</FormLabel>
@@ -800,10 +844,28 @@ export default function AddEmployee() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <FormField
                       control={form.control}
+                      name="salary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Salary (₹) *</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Enter total salary" 
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="basicSalary"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Basic Salary (₹) *</FormLabel>
+                          <FormLabel>Basic Salary (₹)</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 

@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { departments, employees, leaveBalances, leaveApplications, attendanceRecords, approvals, users } from "@shared/schema";
+import { departments, employees, leaveBalances, leaveApplications, attendanceRecords, approvals, users, companies } from "@shared/schema";
 import crypto from "crypto";
 
 // Simple password hashing function
@@ -11,6 +11,20 @@ async function seedDatabase() {
   console.log("🌱 Seeding database...");
 
   try {
+    // Create default company first
+    const [defaultCompany] = await db
+      .insert(companies)
+      .values({
+        id: "default-company",
+        name: "Default Company",
+        code: "DEFAULT",
+        address: "Default Address",
+        phone: "1234567890",
+        email: "admin@defaultcompany.com",
+      })
+      .onConflictDoNothing()
+      .returning();
+
     // Create departments
     const dept1 = await db.insert(departments).values({
       name: "Engineering",
@@ -29,6 +43,7 @@ async function seedDatabase() {
 
     // Create employees
     const emp1 = await db.insert(employees).values({
+      companyId: "default-company",
       employeeId: "EMP001",
       name: "John Smith",
       email: "john.smith@company.com",
@@ -42,6 +57,7 @@ async function seedDatabase() {
     }).returning();
 
     const emp2 = await db.insert(employees).values({
+      companyId: "default-company",
       employeeId: "EMP002",
       name: "Sarah Johnson",
       email: "sarah.johnson@company.com",
@@ -55,6 +71,7 @@ async function seedDatabase() {
     }).returning();
 
     const emp3 = await db.insert(employees).values({
+      companyId: "default-company",
       employeeId: "EMP003",
       name: "Mike Chen",
       email: "mike.chen@company.com",
@@ -68,6 +85,7 @@ async function seedDatabase() {
     }).returning();
 
     const emp4 = await db.insert(employees).values({
+      companyId: "default-company",
       employeeId: "EMP004",
       name: "Lisa Rodriguez",
       email: "lisa.rodriguez@company.com",

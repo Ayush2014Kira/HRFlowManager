@@ -206,14 +206,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/employees", async (req, res) => {
     try {
+      console.log("Received employee data:", JSON.stringify(req.body, null, 2));
       const validatedData = insertEmployeeSchema.parse(req.body);
+      console.log("Validated employee data:", JSON.stringify(validatedData, null, 2));
       const employee = await storage.createEmployee(validatedData);
       res.status(201).json(employee);
     } catch (error) {
+      console.error("Employee creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid employee data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to create employee" });
+      res.status(500).json({ error: "Failed to create employee", details: error.message || error });
     }
   });
 
