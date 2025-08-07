@@ -340,6 +340,7 @@ export const insertLeaveApplicationSchema = createInsertSchema(leaveApplications
   appliedAt: true,
   approvedBy: true,
   approvedAt: true,
+  totalDays: true, // Backend calculates this automatically
 });
 
 export const insertAttendanceRecordSchema = createInsertSchema(attendanceRecords).omit({
