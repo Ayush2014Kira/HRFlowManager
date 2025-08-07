@@ -10,11 +10,24 @@ export const attendanceStatusEnum = pgEnum('attendance_status', ['present', 'abs
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected']);
 export const approvalTypeEnum = pgEnum('approval_type', ['leave', 'miss_punch', 'overtime']);
 
-// Users table
+// Users table for authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").notNull().default("employee"), // admin, hr, manager, employee
+  employeeId: varchar("employee_id"),
+  isActive: boolean("is_active").notNull().default(true),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// User sessions for authentication
+export const userSessions = pgTable("user_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // Departments table
@@ -129,6 +142,21 @@ export const payrollRecords = pgTable("payroll_records", {
 });
 
 // Relations
+export const usersRelations = relations(users, ({ one, many }) => ({
+  employee: one(employees, {
+    fields: [users.employeeId],
+    references: [employees.id],
+  }),
+  sessions: many(userSessions),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
+    references: [users.id],
+  }),
+}));
+
 export const departmentsRelations = relations(departments, ({ many }) => ({
   employees: many(employees),
 }));
@@ -137,6 +165,10 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   department: one(departments, {
     fields: [employees.departmentId],
     references: [departments.id],
+  }),
+  user: one(users, {
+    fields: [employees.id],
+    references: [users.employeeId],
   }),
   leaveBalances: many(leaveBalances),
   leaveApplications: many(leaveApplications),
@@ -195,6 +227,13 @@ export const payrollRecordsRelations = relations(payrollRecords, ({ one }) => ({
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  createdAt: true,
+  lastLogin: true,
+});
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertDepartmentSchema = createInsertSchema(departments).omit({
@@ -246,6 +285,9 @@ export const insertPayrollRecordSchema = createInsertSchema(payrollRecords).omit
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+export type UserSession = typeof userSessions.$inferSelect;
 
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Department = typeof departments.$inferSelect;

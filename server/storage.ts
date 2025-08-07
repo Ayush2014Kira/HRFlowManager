@@ -8,6 +8,7 @@ import {
   approvals, 
   payrollRecords,
   users,
+  userSessions,
   type Employee, 
   type Department, 
   type LeaveBalance, 
@@ -17,6 +18,7 @@ import {
   type Approval, 
   type PayrollRecord,
   type User,
+  type UserSession,
   type InsertEmployee, 
   type InsertDepartment, 
   type InsertLeaveBalance, 
@@ -25,7 +27,8 @@ import {
   type InsertMissPunchRequest, 
   type InsertApproval, 
   type InsertPayrollRecord,
-  type InsertUser
+  type InsertUser,
+  type InsertUserSession
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
@@ -35,6 +38,12 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserLastLogin(id: string): Promise<void>;
+  
+  // Session methods
+  createSession(session: InsertUserSession): Promise<UserSession>;
+  getSession(id: string): Promise<UserSession | undefined>;
+  deleteSession(id: string): Promise<void>;
 
   // Employee methods
   getEmployees(): Promise<(Employee & { department: Department })[]>;
@@ -104,6 +113,36 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async updateUserLastLogin(id: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastLogin: new Date() })
+      .where(eq(users.id, id));
+  }
+
+  // Session methods
+  async createSession(insertSession: InsertUserSession): Promise<UserSession> {
+    const [session] = await db
+      .insert(userSessions)
+      .values(insertSession)
+      .returning();
+    return session;
+  }
+
+  async getSession(id: string): Promise<UserSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(userSessions)
+      .where(eq(userSessions.id, id));
+    return session || undefined;
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    await db
+      .delete(userSessions)
+      .where(eq(userSessions.id, id));
   }
 
   // Employee methods

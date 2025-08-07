@@ -9,8 +9,69 @@ import {
   insertAttendanceRecordSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import crypto from "crypto";
+
+// Simple password hashing function
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+function verifyPassword(password: string, hash: string): boolean {
+  return hashPassword(password) === hash;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user || !verifyPassword(password, user.password)) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({ error: "Account is deactivated" });
+      }
+
+      // Update last login
+      await storage.updateUserLastLogin(user.id);
+
+      // Get employee details if available
+      let employee = null;
+      if (user.employeeId) {
+        employee = await storage.getEmployee(user.employeeId);
+      }
+
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          employeeId: user.employeeId,
+          employee
+        }
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      // For now, just return success (client will handle session cleanup)
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to logout" });
+    }
+  });
+
   // Dashboard stats
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
@@ -93,6 +154,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Leave applications routes
+  // Employee-specific leave balance route
+  app.get("/api/leave-balances/:employeeId", async (req, res) => {
+    try {
+      const balance = await storage.getLeaveBalance(req.params.employeeId);
+      res.json(balance);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch leave balance" });
+    }
+  });
+
   app.get("/api/leave-applications", async (req, res) => {
     try {
       const { employeeId } = req.query;
@@ -107,6 +178,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(applications);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch leave applications" });
+    }
+  });
+
+  app.get("/api/leave-applications/employee/:employeeId", async (req, res) => {
+    try {
+      const leaves = await storage.getLeaveApplicationsByEmployee(req.params.employeeId);
+      res.json(leaves);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employee leave applications" });
     }
   });
 

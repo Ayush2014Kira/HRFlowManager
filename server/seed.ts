@@ -1,5 +1,11 @@
 import { db } from "./db";
-import { departments, employees, leaveBalances, leaveApplications, attendanceRecords, approvals } from "@shared/schema";
+import { departments, employees, leaveBalances, leaveApplications, attendanceRecords, approvals, users } from "@shared/schema";
+import crypto from "crypto";
+
+// Simple password hashing function
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 async function seedDatabase() {
   console.log("🌱 Seeding database...");
@@ -189,6 +195,44 @@ async function seedDatabase() {
       }
     ]);
 
+    // Create user accounts for login
+    await db.insert(users).values([
+      {
+        username: "admin",
+        password: hashPassword("admin123"),
+        role: "admin",
+        isActive: true
+      },
+      {
+        username: "sarah.johnson",
+        password: hashPassword("sarah123"),
+        role: "hr",
+        employeeId: emp2[0].id,
+        isActive: true
+      },
+      {
+        username: "john.smith",
+        password: hashPassword("john123"),
+        role: "employee",
+        employeeId: emp1[0].id,
+        isActive: true
+      },
+      {
+        username: "mike.chen",
+        password: hashPassword("mike123"),
+        role: "employee",
+        employeeId: emp3[0].id,
+        isActive: true
+      },
+      {
+        username: "lisa.rodriguez",
+        password: hashPassword("lisa123"),
+        role: "employee",
+        employeeId: emp4[0].id,
+        isActive: true
+      }
+    ]);
+
     // Create approval records
     await db.insert(approvals).values([
       {
@@ -214,10 +258,18 @@ async function seedDatabase() {
     console.log("📊 Created:");
     console.log("  - 3 departments");
     console.log("  - 4 employees");
+    console.log("  - 5 user accounts (admin, hr, employees)");
     console.log("  - Leave balances for all employees");
     console.log("  - 2 leave applications");
     console.log("  - Attendance records for today and yesterday");
     console.log("  - 2 approval records");
+    console.log("");
+    console.log("🔐 Login Credentials:");
+    console.log("  Admin: admin / admin123");
+    console.log("  HR Manager: sarah.johnson / sarah123");
+    console.log("  Employee: john.smith / john123");
+    console.log("  Employee: mike.chen / mike123");
+    console.log("  Employee: lisa.rodriguez / lisa123");
     
   } catch (error) {
     console.error("❌ Error seeding database:", error);
