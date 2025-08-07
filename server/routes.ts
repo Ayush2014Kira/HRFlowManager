@@ -590,6 +590,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Advanced feature imports
+  const { esslService } = await import("./esslIntegration");
+  const { gpsTrackingService } = await import("./gpsTracking");
+  const { aiDocumentGenerator } = await import("./aiDocumentGenerator");
+
+  // Start eSSL sync service
+  try {
+    await esslService.startSync();
+  } catch (error) {
+    console.warn("⚠️ eSSL service not started:", error.message);
+  }
+
+  // eSSL Integration Routes
+  app.get("/api/essl/status", (req, res) => {
+    res.json(esslService.getDeviceStatus());
+  });
+
+  app.post("/api/essl/sync/:deviceId", async (req, res) => {
+    try {
+      const success = await esslService.manualSync(req.params.deviceId);
+      res.json({ success, message: success ? "Sync initiated" : "Device not connected" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to sync device" });
+    }
+  });
+
+  // GPS Tracking Routes
+  app.post("/api/gps/update-location", async (req, res) => {
+    try {
+      const { employeeId, latitude, longitude, accuracy, address, isFieldWork } = req.body;
+      
+      const result = await gpsTrackingService.updateEmployeeLocation({
+        employeeId,
+        coordinates: {
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
+          accuracy,
+          timestamp: new Date()
+        },
+        address,
+        isFieldWork
+      });
+
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/gps/start-fieldwork", async (req, res) => {
+    try {
+      const { employeeId, clientName, purpose, latitude, longitude, address } = req.body;
+      
+      const coordinates = latitude && longitude ? {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        timestamp: new Date()
+      } : undefined;
+
+      const fieldWork = await gpsTrackingService.startFieldWork(
+        employeeId,
+        clientName,
+        purpose,
+        coordinates,
+        address
+      );
+
+      res.status(201).json(fieldWork);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/gps/end-fieldwork/:visitId", async (req, res) => {
+    try {
+      const { latitude, longitude, address, notes } = req.body;
+      
+      const coordinates = latitude && longitude ? {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        timestamp: new Date()
+      } : undefined;
+
+      const fieldWork = await gpsTrackingService.endFieldWork(
+        req.params.visitId,
+        coordinates,
+        address,
+        notes
+      );
+
+      res.json(fieldWork);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/gps/location-history/:employeeId", async (req, res) => {
+    try {
+      const { days } = req.query;
+      const history = await gpsTrackingService.getEmployeeLocationHistory(
+        req.params.employeeId,
+        days ? parseInt(days as string) : 7
+      );
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch location history" });
+    }
+  });
+
+  app.get("/api/gps/location-report/:employeeId", async (req, res) => {
+    try {
+      const { fromDate, toDate } = req.query;
+      const report = await gpsTrackingService.generateLocationReport(
+        req.params.employeeId,
+        fromDate as string,
+        toDate as string
+      );
+      res.json(report);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to generate location report" });
+    }
+  });
+
+  // AI Document Generation Routes
+  app.post("/api/ai/generate-document", async (req, res) => {
+    try {
+      const document = await aiDocumentGenerator.generateDocument(req.body);
+      res.json(document);
+    } catch (error) {
+      if (error.message.includes("OPENAI_API_KEY")) {
+        return res.status(400).json({ 
+          error: "OpenAI API key not configured. Please provide your OpenAI API key to use AI features." 
+        });
+      }
+      res.status(500).json({ error: "Failed to generate document" });
+    }
+  });
+
+  app.post("/api/ai/generate-policy", async (req, res) => {
+    try {
+      const { policyType, companyId, customRequirements } = req.body;
+      const document = await aiDocumentGenerator.generatePolicyFromTemplate(
+        policyType,
+        companyId,
+        customRequirements
+      );
+      res.json(document);
+    } catch (error) {
+      if (error.message.includes("OPENAI_API_KEY")) {
+        return res.status(400).json({ 
+          error: "OpenAI API key not configured. Please provide your OpenAI API key to use AI features." 
+        });
+      }
+      res.status(500).json({ error: "Failed to generate policy document" });
+    }
+  });
+
+  app.post("/api/ai/generate-offer-letter", async (req, res) => {
+    try {
+      const { employeeId, position, salary, startDate, benefits } = req.body;
+      const document = await aiDocumentGenerator.generateOfferLetter(
+        employeeId,
+        position,
+        parseFloat(salary),
+        startDate,
+        benefits
+      );
+      res.json(document);
+    } catch (error) {
+      if (error.message.includes("OPENAI_API_KEY")) {
+        return res.status(400).json({ 
+          error: "OpenAI API key not configured. Please provide your OpenAI API key to use AI features." 
+        });
+      }
+      res.status(500).json({ error: "Failed to generate offer letter" });
+    }
+  });
+
+  app.post("/api/ai/generate-performance-review", async (req, res) => {
+    try {
+      const { employeeId, reviewPeriod, achievements, improvements } = req.body;
+      const document = await aiDocumentGenerator.generatePerformanceReview(
+        employeeId,
+        reviewPeriod,
+        achievements,
+        improvements
+      );
+      res.json(document);
+    } catch (error) {
+      if (error.message.includes("OPENAI_API_KEY")) {
+        return res.status(400).json({ 
+          error: "OpenAI API key not configured. Please provide your OpenAI API key to use AI features." 
+        });
+      }
+      res.status(500).json({ error: "Failed to generate performance review" });
+    }
+  });
+
+  app.post("/api/ai/batch-generate", async (req, res) => {
+    try {
+      const { requests } = req.body;
+      const documents = await aiDocumentGenerator.batchGenerateDocuments(requests);
+      res.json(documents);
+    } catch (error) {
+      if (error.message.includes("OPENAI_API_KEY")) {
+        return res.status(400).json({ 
+          error: "OpenAI API key not configured. Please provide your OpenAI API key to use AI features." 
+        });
+      }
+      res.status(500).json({ error: "Failed to generate documents" });
+    }
+  });
+
   // Mobile API Routes - Token-based authentication for mobile apps
   const mobileTokens = new Map<string, { userId: string, expires: number, employeeId?: string }>();
 
