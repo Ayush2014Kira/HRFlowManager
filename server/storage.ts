@@ -389,15 +389,15 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Calculate working hours
-    const punchInTime = new Date(existing.punchIn);
+    const punchInTime = new Date(existing.punchIn!);
     const workingMs = now.getTime() - punchInTime.getTime();
     const workingHours = Number((workingMs / (1000 * 60 * 60)).toFixed(2));
     const overtimeHours = Math.max(0, workingHours - 8);
 
     return await this.updateAttendanceRecord(existing.id, {
       punchOut: now,
-      workingHours: workingHours.toString(),
-      overtimeHours: overtimeHours.toString()
+      workingHours: workingHours.toFixed(2),
+      overtimeHours: overtimeHours.toFixed(2)
     });
   }
 

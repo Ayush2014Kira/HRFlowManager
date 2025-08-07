@@ -417,7 +417,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/leave-applications", async (req, res) => {
     try {
+      console.log("Leave application request body:", JSON.stringify(req.body, null, 2));
       const validatedData = insertLeaveApplicationSchema.parse(req.body);
+      console.log("Validated leave application data:", JSON.stringify(validatedData, null, 2));
       
       // Calculate total days
       const fromDate = new Date(validatedData.fromDate);
@@ -432,10 +434,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const application = await storage.createLeaveApplication(applicationData);
       res.status(201).json(application);
     } catch (error) {
+      console.error("Leave application error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid leave application data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to create leave application" });
+      res.status(500).json({ error: "Failed to create leave application", details: error.message || error });
     }
   });
 
