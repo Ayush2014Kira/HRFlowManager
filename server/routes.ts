@@ -6,7 +6,8 @@ import {
   insertDepartmentSchema, 
   insertLeaveApplicationSchema,
   insertMissPunchRequestSchema,
-  insertAttendanceRecordSchema 
+  insertAttendanceRecordSchema,
+  insertFieldWorkVisitSchema
 } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
@@ -161,6 +162,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(balance);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch leave balance" });
+    }
+  });
+
+  // Field work visits routes
+  app.get("/api/field-visits/active/:employeeId", async (req, res) => {
+    try {
+      const visits = await storage.getActiveFieldVisits(req.params.employeeId);
+      res.json(visits);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch active visits" });
+    }
+  });
+
+  app.get("/api/field-visits/completed/:employeeId", async (req, res) => {
+    try {
+      const visits = await storage.getCompletedFieldVisits(req.params.employeeId);
+      res.json(visits);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch completed visits" });
+    }
+  });
+
+  app.post("/api/field-visits", async (req, res) => {
+    try {
+      const validatedData = insertFieldWorkVisitSchema.parse(req.body);
+      const visit = await storage.createFieldVisit({
+        ...validatedData,
+        startTime: new Date()
+      });
+      res.status(201).json(visit);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid visit data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create field visit" });
+    }
+  });
+
+  app.put("/api/field-visits/:id/end", async (req, res) => {
+    try {
+      const { endLocation, endAddress } = req.body;
+      const visit = await storage.endFieldVisit(req.params.id, {
+        endTime: new Date(),
+        endLocation,
+        endAddress
+      });
+      res.json(visit);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to end field visit" });
+    }
+  });
+
+  // Advanced reporting routes
+  app.get("/api/reports/analytics", async (req, res) => {
+    try {
+      const { from, to, department } = req.query;
+      const analytics = await storage.getAnalytics({
+        from: from as string,
+        to: to as string,
+        department: department as string
+      });
+      res.json(analytics);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  app.get("/api/reports/attendance-trends", async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const trends = await storage.getAttendanceTrends({
+        from: from as string,
+        to: to as string
+      });
+      res.json(trends);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch attendance trends" });
+    }
+  });
+
+  app.get("/api/reports/leave-stats", async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const stats = await storage.getLeaveStatistics({
+        from: from as string,
+        to: to as string
+      });
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch leave statistics" });
+    }
+  });
+
+  app.get("/api/reports/field-work", async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const stats = await storage.getFieldWorkStatistics({
+        from: from as string,
+        to: to as string
+      });
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch field work statistics" });
+    }
+  });
+
+  app.get("/api/reports/export/:type", async (req, res) => {
+    try {
+      const { type } = req.params;
+      const { from, to, department } = req.query;
+      
+      const csvData = await storage.exportReport(type, {
+        from: from as string,
+        to: to as string,
+        department: department as string
+      });
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=${type}-report.csv`);
+      res.send(csvData);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to export report" });
     }
   });
 

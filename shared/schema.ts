@@ -93,6 +93,29 @@ export const attendanceRecords = pgTable("attendance_records", {
   workingHours: decimal("working_hours", { precision: 4, scale: 2 }),
   overtimeHours: decimal("overtime_hours", { precision: 4, scale: 2 }),
   status: attendanceStatusEnum("status").notNull().default('absent'),
+  punchInLocation: text("punch_in_location"), // GPS coordinates for punch in
+  punchOutLocation: text("punch_out_location"), // GPS coordinates for punch out
+  punchInAddress: text("punch_in_address"), // Readable address
+  punchOutAddress: text("punch_out_address"), // Readable address
+  isFieldWork: boolean("is_field_work").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Field work visits table for GPS tracking
+export const fieldWorkVisits = pgTable("field_work_visits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull(),
+  clientName: text("client_name").notNull(),
+  purpose: text("purpose").notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  startLocation: text("start_location"), // GPS coordinates
+  endLocation: text("end_location"), // GPS coordinates
+  startAddress: text("start_address"), // Readable address
+  endAddress: text("end_address"), // Readable address
+  distance: decimal("distance", { precision: 10, scale: 2 }), // in kilometers
+  status: varchar("status", { length: 20 }).notNull().default("in_progress"), // in_progress, completed
+  notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -282,6 +305,11 @@ export const insertPayrollRecordSchema = createInsertSchema(payrollRecords).omit
   createdAt: true,
 });
 
+export const insertFieldWorkVisitSchema = createInsertSchema(fieldWorkVisits).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -309,6 +337,9 @@ export type MissPunchRequest = typeof missPunchRequests.$inferSelect;
 
 export type InsertApproval = z.infer<typeof insertApprovalSchema>;
 export type Approval = typeof approvals.$inferSelect;
+
+export type InsertFieldWorkVisit = z.infer<typeof insertFieldWorkVisitSchema>;
+export type FieldWorkVisit = typeof fieldWorkVisits.$inferSelect;
 
 export type InsertPayrollRecord = z.infer<typeof insertPayrollRecordSchema>;
 export type PayrollRecord = typeof payrollRecords.$inferSelect;

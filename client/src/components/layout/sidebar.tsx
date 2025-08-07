@@ -7,7 +7,8 @@ import {
   Calendar, 
   DollarSign, 
   CheckCircle, 
-  BarChart3 
+  BarChart3,
+  MapPin
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Leave Management", href: "/leaves", icon: Calendar },
   { name: "Payroll & Salary", href: "/payroll", icon: DollarSign },
   { name: "Approvals", href: "/approvals", icon: CheckCircle },
+  { name: "Field Tracking", href: "/field-tracking", icon: MapPin },
   { name: "Reports", href: "/reports", icon: BarChart3 },
 ];
 

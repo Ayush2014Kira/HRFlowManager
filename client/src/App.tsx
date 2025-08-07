@@ -13,6 +13,8 @@ import Payroll from "@/pages/payroll";
 import Approvals from "@/pages/approvals";
 import LoginPage from "@/pages/login";
 import EmployeePortalPage from "@/pages/employee-portal";
+import FieldTrackingPage from "@/pages/field-tracking";
+import ReportsPage from "@/pages/reports";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -93,6 +95,8 @@ function Router() {
             <Route path="/leaves" component={Leaves} />
             <Route path="/payroll" component={Payroll} />
             <Route path="/approvals" component={Approvals} />
+            <Route path="/field-tracking" component={FieldTrackingPage} />
+            <Route path="/reports" component={ReportsPage} />
             <Route component={NotFound} />
           </Switch>
         </main>

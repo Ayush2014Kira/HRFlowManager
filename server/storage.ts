@@ -7,6 +7,7 @@ import {
   missPunchRequests, 
   approvals, 
   payrollRecords,
+  fieldWorkVisits,
   users,
   userSessions,
   type Employee, 
@@ -28,7 +29,9 @@ import {
   type InsertApproval, 
   type InsertPayrollRecord,
   type InsertUser,
-  type InsertUserSession
+  type InsertUserSession,
+  type FieldWorkVisit,
+  type InsertFieldWorkVisit
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
@@ -96,6 +99,19 @@ export interface IStorage {
     pendingLeaves: number;
     attendanceRate: number;
   }>;
+
+  // Field work operations
+  createFieldVisit(data: InsertFieldWorkVisit): Promise<FieldWorkVisit>;
+  getActiveFieldVisits(employeeId: string): Promise<FieldWorkVisit[]>;
+  getCompletedFieldVisits(employeeId: string): Promise<FieldWorkVisit[]>;
+  endFieldVisit(id: string, updates: { endTime: Date; endLocation?: string; endAddress?: string }): Promise<FieldWorkVisit>;
+
+  // Analytics and reporting
+  getAnalytics(params: { from?: string; to?: string; department?: string }): Promise<any>;
+  getAttendanceTrends(params: { from?: string; to?: string }): Promise<any>;
+  getLeaveStatistics(params: { from?: string; to?: string }): Promise<any>;
+  getFieldWorkStatistics(params: { from?: string; to?: string }): Promise<any>;
+  exportReport(type: string, params: { from?: string; to?: string; department?: string }): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -472,6 +488,110 @@ export class DatabaseStorage implements IStorage {
       pendingLeaves,
       attendanceRate: Number(attendanceRate.toFixed(1))
     };
+  }
+
+  // Field work methods
+  async createFieldVisit(data: InsertFieldWorkVisit): Promise<FieldWorkVisit> {
+    const [visit] = await db.insert(fieldWorkVisits).values(data).returning();
+    return visit;
+  }
+
+  async getActiveFieldVisits(employeeId: string): Promise<FieldWorkVisit[]> {
+    return await db.select().from(fieldWorkVisits)
+      .where(and(
+        eq(fieldWorkVisits.employeeId, employeeId),
+        eq(fieldWorkVisits.status, 'in_progress')
+      ))
+      .orderBy(desc(fieldWorkVisits.startTime));
+  }
+
+  async getCompletedFieldVisits(employeeId: string): Promise<FieldWorkVisit[]> {
+    return await db.select().from(fieldWorkVisits)
+      .where(and(
+        eq(fieldWorkVisits.employeeId, employeeId),
+        eq(fieldWorkVisits.status, 'completed')
+      ))
+      .orderBy(desc(fieldWorkVisits.startTime))
+      .limit(10);
+  }
+
+  async endFieldVisit(id: string, updates: { endTime: Date; endLocation?: string; endAddress?: string }): Promise<FieldWorkVisit> {
+    const [visit] = await db.update(fieldWorkVisits)
+      .set({
+        ...updates,
+        status: 'completed'
+      })
+      .where(eq(fieldWorkVisits.id, id))
+      .returning();
+    return visit;
+  }
+
+  // Analytics methods - returning mock data for now, implement proper analytics later
+  async getAnalytics(params: { from?: string; to?: string; department?: string }): Promise<any> {
+    return {
+      totalEmployees: 25,
+      avgAttendance: 92,
+      pendingLeaves: 8,
+      fieldVisits: 45,
+      departmentDistribution: [
+        { name: 'Engineering', value: 40 },
+        { name: 'Sales', value: 30 },
+        { name: 'HR', value: 20 },
+        { name: 'Marketing', value: 10 }
+      ]
+    };
+  }
+
+  async getAttendanceTrends(params: { from?: string; to?: string }): Promise<any> {
+    return [
+      { month: 'Jan', attendance: 95 },
+      { month: 'Feb', attendance: 92 },
+      { month: 'Mar', attendance: 98 },
+      { month: 'Apr', attendance: 90 },
+      { month: 'May', attendance: 94 }
+    ];
+  }
+
+  async getLeaveStatistics(params: { from?: string; to?: string }): Promise<any> {
+    return {
+      typeDistribution: [
+        { name: 'Annual', count: 45 },
+        { name: 'Sick', count: 32 },
+        { name: 'Casual', count: 28 },
+        { name: 'Emergency', count: 15 }
+      ],
+      monthlyTrends: [
+        { month: 'Jan', applications: 12, approved: 10 },
+        { month: 'Feb', applications: 15, approved: 13 },
+        { month: 'Mar', applications: 18, approved: 16 }
+      ]
+    };
+  }
+
+  async getFieldWorkStatistics(params: { from?: string; to?: string }): Promise<any> {
+    return {
+      dailyVisits: [
+        { date: '2024-01-01', visits: 5 },
+        { date: '2024-01-02', visits: 8 },
+        { date: '2024-01-03', visits: 6 }
+      ],
+      topFieldWorkers: [
+        { id: '1', name: 'John Smith', department: 'Sales', visits: 25, distance: '150' },
+        { id: '2', name: 'Sarah Johnson', department: 'Sales', visits: 22, distance: '140' }
+      ]
+    };
+  }
+
+  async exportReport(type: string, params: { from?: string; to?: string; department?: string }): Promise<string> {
+    // Simple CSV export - implement proper data fetching later
+    const headers = ['Date', 'Employee', 'Department', 'Status'];
+    const rows = [
+      ['2024-01-01', 'John Smith', 'Engineering', 'Present'],
+      ['2024-01-01', 'Sarah Johnson', 'HR', 'Present']
+    ];
+    
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    return csv;
   }
 }
 
