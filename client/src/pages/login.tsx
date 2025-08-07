@@ -23,15 +23,12 @@ export default function LoginPage() {
       return await response.json();
     },
     onSuccess: (data) => {
-      localStorage.setItem("user", JSON.stringify(data.user));
       toast({
         title: "Login Successful",
         description: `Welcome back, ${data.user.username}!`,
       });
-      // Force navigation after login
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
+      // Quick redirect without delay
+      window.location.href = "/";
     },
     onError: (error: any) => {
       toast({

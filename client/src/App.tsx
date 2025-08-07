@@ -16,29 +16,54 @@ import RegisterPage from "@/pages/register";
 import EmployeePortalPage from "@/pages/employee-portal";
 import FieldTrackingPage from "@/pages/field-tracking";
 import ReportsPage from "@/pages/reports";
+import AddEmployee from "@/pages/add-employee";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
 function Router() {
   const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        localStorage.removeItem("user");
-      }
-    }
+    // Check backend session instead of localStorage
+    fetch("/api/auth/user", { credentials: "include" })
+      .then(res => res.ok ? res.json() : null)
+      .then(userData => {
+        setUser(userData);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setUser(null);
+        setIsLoading(false);
+      });
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
-    setLocation("/login");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { 
+        method: "POST", 
+        credentials: "include" 
+      });
+      setUser(null);
+      setLocation("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      setUser(null);
+      setLocation("/login");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Show login page if not authenticated
   if (!user) {
@@ -93,6 +118,7 @@ function Router() {
           <Switch>
             <Route path="/" component={Dashboard} />
             <Route path="/employees" component={Employees} />
+            <Route path="/add-employee" component={AddEmployee} />
             <Route path="/attendance" component={Attendance} />
             <Route path="/leaves" component={Leaves} />
             <Route path="/payroll" component={Payroll} />

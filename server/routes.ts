@@ -26,6 +26,41 @@ function verifyPassword(password: string, hash: string): boolean {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
+  app.get("/api/auth/user", async (req, res) => {
+    try {
+      const sessionUser = (req as any).session?.user;
+      if (!sessionUser) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(sessionUser.id);
+      if (!user || !user.isActive) {
+        return res.status(401).json({ error: "User not found or inactive" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error('Get user error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      (req as any).session.destroy((err: any) => {
+        if (err) {
+          console.error('Session destroy error:', err);
+          return res.status(500).json({ error: "Logout failed" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logged out successfully" });
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -46,6 +81,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update last login
       await storage.updateUserLastLogin(user.id);
 
+      // Save user in session
+      (req as any).session.user = { id: user.id };
+
       // Get employee details if available
       let employee = null;
       if (user.employeeId) {
@@ -57,7 +95,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: user.id,
           username: user.username,
           role: user.role,
+          companyId: user.companyId,
           employeeId: user.employeeId,
+          isActive: user.isActive,
           employee
         }
       });
@@ -69,8 +109,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/logout", async (req, res) => {
     try {
-      // For now, just return success (client will handle session cleanup)
-      res.json({ message: "Logged out successfully" });
+      (req as any).session.destroy((err: any) => {
+        if (err) {
+          console.error('Session destroy error:', err);
+          return res.status(500).json({ error: "Logout failed" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logged out successfully" });
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to logout" });
     }

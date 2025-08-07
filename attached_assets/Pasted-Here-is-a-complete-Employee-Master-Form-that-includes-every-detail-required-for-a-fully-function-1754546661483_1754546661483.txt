@@ -1,0 +1,156 @@
+Here is a **complete Employee Master Form** that includes every detail required for a fully functional HRMS — including **personal**, **official**, **bank**, **PF/ESIC**, **past employment**, **salary breakdown**, and **leave balance**. You can use this structure for your database schema, UI form, or PDF document.
+
+---
+
+## 📄 Full Employee Master Form Template
+
+---
+
+### 🔹 1. **Basic Information**
+
+| Field Name     | Input Type                   |
+| -------------- | ---------------------------- |
+| Full Name      | Text                         |
+| Gender         | Dropdown (Male/Female/Other) |
+| Date of Birth  | Date Picker                  |
+| Marital Status | Dropdown                     |
+| Phone Number   | Number                       |
+| Email ID       | Email                        |
+| Aadhaar Number | Number                       |
+| PAN Number     | Text                         |
+| Blood Group    | Dropdown                     |
+| Profile Photo  | File Upload                  |
+
+---
+
+### 🔹 2. **Address Details**
+
+| Field Name        | Input Type |
+| ----------------- | ---------- |
+| Current Address   | TextArea   |
+| Permanent Address | TextArea   |
+| City              | Text       |
+| State             | Text       |
+| Pin Code          | Number     |
+
+---
+
+### 🔹 3. **Company Details**
+
+| Field Name        | Input Type                              |
+| ----------------- | --------------------------------------- |
+| Employee Code     | Auto-generated/Text                     |
+| Department        | Dropdown                                |
+| Designation       | Dropdown                                |
+| Reporting Manager | Dropdown/List                           |
+| Joining Date      | Date Picker                             |
+| Work Location     | Dropdown                                |
+| Employment Type   | Dropdown (Permanent/Contractual/Intern) |
+| Shift Type        | Dropdown (Day/Night/Flexible)           |
+| Employee Status   | Dropdown (Active/Inactive/Terminated)   |
+
+---
+
+### 🔹 4. **Bank Details**
+
+| Field Name          | Input Type |
+| ------------------- | ---------- |
+| Bank Name           | Text       |
+| Account Holder Name | Text       |
+| Account Number      | Number     |
+| IFSC Code           | Text       |
+| Branch              | Text       |
+| UPI ID (Optional)   | Text       |
+
+---
+
+### 🔹 5. **Statutory Details**
+
+| Field Name     | Input Type |
+| -------------- | ---------- |
+| PF Number      | Text       |
+| UAN Number     | Text       |
+| ESIC Number    | Text       |
+| PT Applicable  | Yes/No     |
+| LWF Applicable | Yes/No     |
+
+---
+
+### 🔹 6. **Previous Employment (Optional)**
+
+| Field Name         | Input Type  |
+| ------------------ | ----------- |
+| Company Name       | Text        |
+| Designation        | Text        |
+| From Date          | Date Picker |
+| To Date            | Date Picker |
+| Last CTC           | Number      |
+| Reason for Leaving | TextArea    |
+
+---
+
+### 🔹 7. **Leave Balance**
+
+| Leave Type              | Balance |
+| ----------------------- | ------- |
+| Casual Leave (CL)       | Number  |
+| Paid Leave (PL)         | Number  |
+| Sick Leave (SL)         | Number  |
+| Leave Without Pay (LWP) | Number  |
+
+You can also auto-calculate this monthly or annually.
+
+---
+
+### 🔹 8. **Salary Structure**
+
+| Component            | Amount (₹)      |
+| -------------------- | --------------- |
+| Basic Salary         | Number          |
+| HRA                  | Number          |
+| Special Allowance    | Number          |
+| Conveyance Allowance | Number          |
+| Medical Allowance    | Number          |
+| Bonus / Incentives   | Number          |
+| Overtime (per hour)  | Number          |
+| Deductions (PF/ESIC) | Auto-calculated |
+| Total Gross Salary   | Auto-calculated |
+| Net Salary           | Auto-calculated |
+
+---
+
+### 🔹 9. **Documents Upload Section**
+
+| Document Type        | Upload Field |
+| -------------------- | ------------ |
+| Aadhaar Card         | File Upload  |
+| PAN Card             | File Upload  |
+| Resume               | File Upload  |
+| Offer Letter         | File Upload  |
+| Experience Letter    | File Upload  |
+| Bank Passbook/Cheque | File Upload  |
+| Photo                | File Upload  |
+
+---
+
+### 🔹 10. **System & Access**
+
+| Field Name         | Input Type                        |
+| ------------------ | --------------------------------- |
+| Official Email     | Text                              |
+| Official Phone No  | Text/Number                       |
+| System Assigned    | Dropdown (Yes/No)                 |
+| Machine/Asset Code | Text                              |
+| Biometric ID       | Text (used for punch integration) |
+
+---
+
+## 📘 Export Format Options
+
+Would you like this form:
+
+* As a **fillable PDF?**
+* As a **React Form UI (with Ant Design)?**
+* As a **MongoDB schema + API?**
+
+Let me know your preferred format and I’ll generate the actual file or code.

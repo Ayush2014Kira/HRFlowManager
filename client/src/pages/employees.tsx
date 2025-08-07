@@ -45,7 +45,10 @@ export default function Employees() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-900">Employee Management</h2>
-        <Button className="bg-primary hover:bg-blue-700 text-white">
+        <Button 
+          className="bg-primary hover:bg-blue-700 text-white"
+          onClick={() => window.location.href = "/add-employee"}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Employee
         </Button>
