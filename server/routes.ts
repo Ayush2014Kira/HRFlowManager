@@ -7,7 +7,10 @@ import {
   insertLeaveApplicationSchema,
   insertMissPunchRequestSchema,
   insertAttendanceRecordSchema,
-  insertFieldWorkVisitSchema
+  insertFieldWorkVisitSchema,
+  insertCompanySchema,
+  insertLocationSchema,
+  insertEsslDeviceSchema
 } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
@@ -70,6 +73,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Logged out successfully" });
     } catch (error) {
       res.status(500).json({ error: "Failed to logout" });
+    }
+  });
+
+  // Company registration route
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { companyName, companyCode, companyEmail, companyPhone, adminUsername, adminPassword, timezone } = req.body;
+      
+      if (!companyName || !companyCode || !adminUsername || !adminPassword) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Check if company code already exists
+      const existingCompany = await storage.getCompanyByCode(companyCode);
+      if (existingCompany) {
+        return res.status(400).json({ error: "Company code already exists" });
+      }
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(adminUsername);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Create company
+      const company = await storage.createCompany({
+        name: companyName,
+        code: companyCode,
+        email: companyEmail,
+        phone: companyPhone,
+        timezone: timezone || "UTC"
+      });
+
+      // Create admin user
+      const adminUser = await storage.createUser({
+        username: adminUsername,
+        password: hashPassword(adminPassword),
+        role: "admin",
+        companyId: company.id,
+        isActive: true
+      });
+
+      res.status(201).json({
+        message: "Company registered successfully",
+        company: { id: company.id, name: company.name, code: company.code },
+        user: { id: adminUser.id, username: adminUser.username, role: adminUser.role }
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 

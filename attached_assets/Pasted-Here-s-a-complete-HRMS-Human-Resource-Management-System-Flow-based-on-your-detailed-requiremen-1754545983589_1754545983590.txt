@@ -1,0 +1,212 @@
+Here’s a **complete HRMS (Human Resource Management System) Flow** based on your detailed requirements — covering leave management, attendance tracking, salary slip generation, approval workflows, policies, and multi-role login — suitable for both **web and mobile application development**.
+
+---
+
+## 🔁 Prompt for Replit / Developer Instruction
+
+**Prompt for AI / Replit / ChatGPT:**
+
+> Build a full-stack HRMS (Human Resource Management System) software with both web and mobile applications. The system must support the following modules with clean API structure, proper role-based access control, and responsive UI. The backend should be built using **Node.js + Express + MongoDB**, frontend with **React for Web** and **React Native for Mobile**. Use **JWT for authentication**, **RBAC for roles**, and maintain clean MVC architecture.
+
+---
+
+## 📘 HRMS System Modules & Flow
+
+---
+
+### 🔐 1. **Authentication & Role-Based Access Control**
+
+* ✅ Multi-login support (Employee, HR/Admin, Manager)
+* ✅ Roles: `Admin`, `HR`, `Employee`, `Manager`, `Accounts`
+* ✅ Login using email/phone and password
+* ✅ JWT-based authentication and refresh tokens
+* ✅ Role-based route protection
+
+---
+
+### 👤 2. **Employee Master Management**
+
+* Store all employee-related data:
+
+  * Personal Details
+  * Department, Designation
+  * Bank details, PAN/Aadhaar
+  * **PF/ESIC/UAN Details**
+  * **Individual leave policy overrides**
+* CRUD support for Admin/HR
+
+---
+
+### 🗓️ 3. **Attendance Management**
+
+* Daily punch-in/out (Web/Mobile)
+* Track total working hours
+* **Missed punch tracking**
+* **Marketing Visit status** (with remarks + geo-tag)
+* Late/early check-in/out detection
+
+---
+
+### 🟢 4. **Leave Management System**
+
+* Apply for leave with reason, type, dates
+* Show **Leave Balance** (CL, PL, SL, LWP)
+* Leave types and accrual policies:
+
+  * Default 5 leaves: if exceeded → LWP
+  * **Bonus Leave**: If 21 days continuous working → 1 additional PL
+* Leave Approval Flow:
+
+  * Employee → Manager → HR
+* Email/Push Notifications on each status change
+
+---
+
+### 📃 5. **Salary Slip Generation**
+
+* Salary generation per month with:
+
+  * Basic Pay
+  * Working Hours
+  * **Overtime**
+  * Leaves (Paid, LWP)
+  * Deductions (PF, ESIC, Tax)
+* Admin can configure salary structures
+* PDF Generation of slips (download/email)
+
+---
+
+### 🕰️ 6. **Overtime & Hour Tracking**
+
+* Record extra hours after working time
+* Auto-calculate eligible overtime based on company rules
+* Add to salary slip during processing
+
+---
+
+### 📊 7. **Dashboard (Role-Based)**
+
+* Admin/HR: Total employees, pending leaves, attendance summary
+* Employee: Punch status, leave balance, recent salary slips
+* Manager: Team attendance, leave requests, visit logs
+
+---
+
+## 📲 Web & Mobile App Feature Plans
+
+### Web (React)
+
+* Admin/HR Panel
+* Leave & Attendance Dashboard
+* Master Configurations
+* PDF Slips Export
+
+### Mobile (React Native)
+
+* Employee self-service
+* Punch In/Out
+* Apply leave
+* View Salary Slip
+* Push Notifications
+
+---
+
+## 📁 Suggested Backend API Route Structure
+
+```
+/api/auth/login
+/api/employees/...
+/api/attendance/punch
+/api/attendance/miss-punch
+/api/attendance/visit
+/api/leave/apply
+/api/leave/approve
+/api/leave/policy
+/api/salary/generate
+/api/salary/slip
+```
+
+---
+
+## 🧠 Database Schema Suggestions (MongoDB)
+
+### Employee Schema
+
+```js
+{
+  name, email, phone,
+  designation, department,
+  pfNumber, uanNumber,
+  leaves: { CL: 5, PL: 5, SL: 5, LWP: 0 },
+  role: ['Employee', 'HR', 'Admin'],
+  salaryStructure: { basic, hra, allowances, pfDeduction, ... }
+}
+```
+
+### Attendance Schema
+
+```js
+{
+  employeeId,
+  date,
+  inTime,
+  outTime,
+  totalHours,
+  overtimeHours,
+  status: ['Present', 'Absent', 'Visit', 'Miss Punch'],
+  location
+}
+```
+
+### Leave Application Schema
+
+```js
+{
+  employeeId,
+  leaveType,
+  fromDate,
+  toDate,
+  reason,
+  status: ['Pending', 'Approved', 'Rejected'],
+  approvedBy
+}
+```
+
+### Salary Slip Schema
+
+```js
+{
+  employeeId,
+  month,
+  workingDays,
+  leaves: { CL: 2, LWP: 1 },
+  overtimeHours,
+  grossSalary,
+  deductions: { pf, tax },
+  netSalary,
+  pdfUrl
+}
+```
+
+---
+
+## ✅ Company Policies (To Be Configured in Admin Panel)
+
+* Max 5 leaves/month (else → LWP)
+* 1 extra PL for 21 continuous working days
+* Miss punch or visit → reason and approval
+* Leave carry forward policy
+
+---
+
+## ✅ Optional Enhancements
+
+* ✅ Push Notifications
+* ✅ Email Alerts (Leave Approval, Salary Slip)
+* ✅ Geo-location attendance
+* ✅ QR Code-based punch in (for onsite employees)
+* ✅ Export Reports to Excel/PDF
+
+---
+
+If you want, I can now help you **generate this as a starter code** (backend repo + React web + React Native mobile UI) or design **API docs (Swagger)**. Just say the word.

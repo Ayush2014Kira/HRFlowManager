@@ -8,6 +8,9 @@ import {
   approvals, 
   payrollRecords,
   fieldWorkVisits,
+  companies,
+  locations,
+  esslDevices,
   users,
   userSessions,
   type Employee, 
@@ -31,7 +34,13 @@ import {
   type InsertUser,
   type InsertUserSession,
   type FieldWorkVisit,
-  type InsertFieldWorkVisit
+  type InsertFieldWorkVisit,
+  type Company,
+  type InsertCompany,
+  type Location,
+  type InsertLocation,
+  type EsslDevice,
+  type InsertEsslDevice
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
@@ -112,6 +121,20 @@ export interface IStorage {
   getLeaveStatistics(params: { from?: string; to?: string }): Promise<any>;
   getFieldWorkStatistics(params: { from?: string; to?: string }): Promise<any>;
   exportReport(type: string, params: { from?: string; to?: string; department?: string }): Promise<string>;
+
+  // Company management
+  createCompany(data: InsertCompany): Promise<Company>;
+  getCompanyByCode(code: string): Promise<Company | undefined>;
+  getCompanies(): Promise<Company[]>;
+
+  // Location management
+  createLocation(data: InsertLocation): Promise<Location>;
+  getLocationsByCompany(companyId: string): Promise<Location[]>;
+
+  // eSSL Device management
+  createEsslDevice(data: InsertEsslDevice): Promise<EsslDevice>;
+  getEsslDevices(): Promise<EsslDevice[]>;
+  syncEsslDevice(deviceId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -592,6 +615,52 @@ export class DatabaseStorage implements IStorage {
     
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
     return csv;
+  }
+
+  // Company methods
+  async createCompany(data: InsertCompany): Promise<Company> {
+    const [company] = await db.insert(companies).values(data).returning();
+    return company;
+  }
+
+  async getCompanyByCode(code: string): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.code, code));
+    return company || undefined;
+  }
+
+  async getCompanies(): Promise<Company[]> {
+    return await db.select().from(companies).where(eq(companies.isActive, true));
+  }
+
+  // Location methods
+  async createLocation(data: InsertLocation): Promise<Location> {
+    const [location] = await db.insert(locations).values(data).returning();
+    return location;
+  }
+
+  async getLocationsByCompany(companyId: string): Promise<Location[]> {
+    return await db.select().from(locations)
+      .where(and(eq(locations.companyId, companyId), eq(locations.isActive, true)));
+  }
+
+  // eSSL Device methods
+  async createEsslDevice(data: InsertEsslDevice): Promise<EsslDevice> {
+    const [device] = await db.insert(esslDevices).values(data).returning();
+    return device;
+  }
+
+  async getEsslDevices(): Promise<EsslDevice[]> {
+    return await db.select().from(esslDevices).where(eq(esslDevices.isActive, true));
+  }
+
+  async syncEsslDevice(deviceId: string): Promise<any> {
+    // Placeholder for eSSL device synchronization
+    // In real implementation, this would connect to the eSSL device API
+    await db.update(esslDevices)
+      .set({ lastSync: new Date() })
+      .where(eq(esslDevices.id, deviceId));
+    
+    return { success: true, recordsImported: 0 };
   }
 }
 

@@ -10,12 +10,69 @@ export const attendanceStatusEnum = pgEnum('attendance_status', ['present', 'abs
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected']);
 export const approvalTypeEnum = pgEnum('approval_type', ['leave', 'miss_punch', 'overtime']);
 
+// Companies table for multi-company support
+export const companies = pgTable("companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 10 }).notNull().unique(),
+  address: text("address"),
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 255 }),
+  timezone: varchar("timezone", { length: 50 }).default("UTC"),
+  workingHours: text("working_hours").default('{"start":"09:00","end":"18:00","workDays":[1,2,3,4,5]}'),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Locations table for multiple office locations
+export const locations = pgTable("locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").references(() => companies.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 10 }).notNull(),
+  address: text("address"),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  radius: integer("radius").default(100), // meters for geo-fencing
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// eSSL Device Integration table
+export const esslDevices = pgTable("essl_devices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id).notNull(),
+  deviceId: varchar("device_id", { length: 50 }).notNull().unique(),
+  deviceName: varchar("device_name", { length: 255 }),
+  ipAddress: varchar("ip_address", { length: 15 }),
+  port: integer("port").default(4370),
+  serialNumber: varchar("serial_number", { length: 100 }),
+  model: varchar("model", { length: 100 }),
+  isActive: boolean("is_active").default(true),
+  lastSync: timestamp("last_sync"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Raw punch data from eSSL devices
+export const rawPunchData = pgTable("raw_punch_data", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deviceId: varchar("device_id").references(() => esslDevices.id).notNull(),
+  employeeId: varchar("employee_id", { length: 50 }).notNull(), // From device
+  punchTime: timestamp("punch_time").notNull(),
+  punchType: varchar("punch_type", { length: 10 }).notNull(), // IN/OUT
+  verifyMode: integer("verify_mode"), // Fingerprint, card, etc.
+  isProcessed: boolean("is_processed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Users table for authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("employee"), // admin, hr, manager, employee
+  companyId: varchar("company_id").references(() => companies.id),
   employeeId: varchar("employee_id"),
   isActive: boolean("is_active").notNull().default(true),
   lastLogin: timestamp("last_login"),
@@ -41,7 +98,10 @@ export const departments = pgTable("departments", {
 // Employees table
 export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").references(() => companies.id).notNull(),
+  locationId: varchar("location_id").references(() => locations.id),
   employeeId: text("employee_id").notNull().unique(),
+  esslEmployeeId: varchar("essl_employee_id", { length: 50 }), // ID used in eSSL device
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   phone: text("phone"),
@@ -310,6 +370,28 @@ export const insertFieldWorkVisitSchema = createInsertSchema(fieldWorkVisits).om
   createdAt: true,
 });
 
+export const insertCompanySchema = createInsertSchema(companies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLocationSchema = createInsertSchema(locations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEsslDeviceSchema = createInsertSchema(esslDevices).omit({
+  id: true,
+  createdAt: true,
+  lastSync: true,
+});
+
+export const insertRawPunchDataSchema = createInsertSchema(rawPunchData).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -343,3 +425,15 @@ export type FieldWorkVisit = typeof fieldWorkVisits.$inferSelect;
 
 export type InsertPayrollRecord = z.infer<typeof insertPayrollRecordSchema>;
 export type PayrollRecord = typeof payrollRecords.$inferSelect;
+
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type Company = typeof companies.$inferSelect;
+
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
+export type Location = typeof locations.$inferSelect;
+
+export type InsertEsslDevice = z.infer<typeof insertEsslDeviceSchema>;
+export type EsslDevice = typeof esslDevices.$inferSelect;
+
+export type InsertRawPunchData = z.infer<typeof insertRawPunchDataSchema>;
+export type RawPunchData = typeof rawPunchData.$inferSelect;

@@ -28,7 +28,10 @@ export default function LoginPage() {
         title: "Login Successful",
         description: `Welcome back, ${data.user.username}!`,
       });
-      setLocation("/");
+      // Force navigation after login
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     },
     onError: (error: any) => {
       toast({
@@ -130,6 +133,9 @@ export default function LoginPage() {
                   <p><strong>HR Manager:</strong> sarah.johnson / sarah123</p>
                   <p><strong>Employee:</strong> john.smith / john123</p>
                 </div>
+              </div>
+              <div className="mt-4">
+                <p>New company? <button onClick={() => setLocation("/register")} className="text-primary hover:underline">Register here</button></p>
               </div>
             </div>
           </CardContent>

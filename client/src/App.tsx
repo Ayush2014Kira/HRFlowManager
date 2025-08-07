@@ -12,6 +12,7 @@ import Leaves from "@/pages/leaves";
 import Payroll from "@/pages/payroll";
 import Approvals from "@/pages/approvals";
 import LoginPage from "@/pages/login";
+import RegisterPage from "@/pages/register";
 import EmployeePortalPage from "@/pages/employee-portal";
 import FieldTrackingPage from "@/pages/field-tracking";
 import ReportsPage from "@/pages/reports";
@@ -44,6 +45,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/login" component={LoginPage} />
+        <Route path="/register" component={RegisterPage} />
         <Route>
           {() => {
             setLocation("/login");
