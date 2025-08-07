@@ -216,15 +216,21 @@ export class DatabaseStorage implements IStorage {
 
   // Attendance methods
   async getAttendanceRecords(employeeId?: string, date?: string): Promise<(AttendanceRecord & { employee: Employee })[]> {
-    let query = db.select().from(attendanceRecords)
-      .innerJoin(employees, eq(attendanceRecords.employeeId, employees.id));
-
+    let whereConditions = [];
+    
     if (employeeId) {
-      query = query.where(eq(attendanceRecords.employeeId, employeeId));
+      whereConditions.push(eq(attendanceRecords.employeeId, employeeId));
+    }
+    
+    if (date) {
+      whereConditions.push(eq(attendanceRecords.date, date));
     }
 
-    if (date) {
-      query = query.where(eq(attendanceRecords.date, date));
+    let query = db.select().from(attendanceRecords)
+      .innerJoin(employees, eq(attendanceRecords.employeeId, employees.id));
+    
+    if (whereConditions.length > 0) {
+      query = query.where(whereConditions.length === 1 ? whereConditions[0] : and(...whereConditions));
     }
 
     return await query.then(rows => rows.map(row => ({ ...row.attendance_records, employee: row.employees })));

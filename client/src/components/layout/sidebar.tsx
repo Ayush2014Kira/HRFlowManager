@@ -28,7 +28,7 @@ export default function Sidebar() {
     queryKey: ["/api/approvals/pending"],
   });
 
-  const pendingCount = pendingApprovals?.length || 0;
+  const pendingCount = Array.isArray(pendingApprovals) ? pendingApprovals.length : 0;
 
   return (
     <aside className="w-64 bg-white shadow-sm h-screen sticky top-0 overflow-y-auto">
@@ -38,23 +38,19 @@ export default function Sidebar() {
           const Icon = item.icon;
           
           return (
-            <Link key={item.name} href={item.href}>
-              <a
-                className={cn(
-                  "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors",
-                  isActive
-                    ? "text-white bg-primary"
-                    : "text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                <Icon className="mr-3 h-5 w-5" />
-                {item.name}
-                {item.name === "Approvals" && pendingCount > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    {pendingCount}
-                  </span>
-                )}
-              </a>
+            <Link key={item.name} href={item.href} className={cn(
+              "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors",
+              isActive
+                ? "text-white bg-primary"
+                : "text-gray-700 hover:bg-gray-100"
+            )}>
+              <Icon className="mr-3 h-5 w-5" />
+              {item.name}
+              {item.name === "Approvals" && pendingCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}

@@ -7,7 +7,7 @@ export default function Header() {
     queryKey: ["/api/approvals/pending"],
   });
 
-  const pendingCount = pendingApprovals?.length || 0;
+  const pendingCount = Array.isArray(pendingApprovals) ? pendingApprovals.length : 0;
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
