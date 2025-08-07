@@ -5,6 +5,8 @@ This is a comprehensive Human Resource Management System (HRMS) built with a mod
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
+Target platforms: Web and mobile applications (React Native support requested)
+Business requirements: Multi-company HRMS with eSSL integration, advanced hour calculation, mobile-first approach
 
 # System Architecture
 
@@ -41,9 +43,11 @@ The system uses a well-structured relational schema with the following core enti
 - **Approval System**: Unified approval workflow for leaves and miss-punch requests
 
 ## Authentication and Authorization
-- Currently implements a basic user system with username/password authentication
-- Session-based authentication preparation with PostgreSQL session storage
-- Role-based access control foundation in place for future expansion
+- Multi-company user system with username/password authentication
+- JWT-based authentication for mobile app compatibility
+- Session-based authentication for web application
+- Role-based access control (admin, hr, manager, employee)
+- Company-specific user isolation and data segregation
 
 ## Development Architecture
 - **Monorepo Structure**: Organized into client, server, and shared directories

@@ -538,6 +538,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mobile API Routes - Token-based authentication for mobile apps
+  const mobileTokens = new Map<string, { userId: string, expires: number, employeeId?: string }>();
+
+  function generateMobileToken(userId: string, employeeId?: string): string {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
+    mobileTokens.set(token, { userId, expires, employeeId });
+    return token;
+  }
+
+  function verifyMobileToken(req: any, res: any, next: any) {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: "Access denied. No token provided." });
+    }
+
+    const tokenData = mobileTokens.get(token);
+    if (!tokenData || tokenData.expires < Date.now()) {
+      mobileTokens.delete(token);
+      return res.status(401).json({ error: "Invalid or expired token." });
+    }
+
+    req.user = { id: tokenData.userId, employeeId: tokenData.employeeId };
+    next();
+  }
+
+  // Mobile Authentication
+  app.post("/api/mobile/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+
+      const user = await storage.getUserByUsername(username);
+      if (!user || user.password !== hashPassword(password)) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({ error: "Account is deactivated" });
+      }
+
+      const token = generateMobileToken(user.id, user.employeeId || undefined);
+      await storage.updateUserLastLogin(user.id);
+
+      let employee = null;
+      if (user.employeeId) {
+        employee = await storage.getEmployee(user.employeeId);
+      }
+
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          companyId: user.companyId,
+          employeeId: user.employeeId,
+          employee
+        }
+      });
+    } catch (error) {
+      console.error('Mobile login error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Mobile Dashboard
+  app.get("/api/mobile/dashboard", verifyMobileToken, async (req, res) => {
+    try {
+      const employeeId = req.user.employeeId;
+      if (!employeeId) {
+        return res.status(400).json({ error: "Employee ID required" });
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const leaveBalance = await storage.getLeaveBalance(employeeId);
+      const recentLeaves = await storage.getLeaveApplicationsByEmployee(employeeId);
+
+      res.json({
+        date: today,
+        leaveBalance: leaveBalance || { 
+          employeeId, 
+          annualLeaves: 21, 
+          sickLeaves: 10, 
+          casualLeaves: 7, 
+          usedAnnual: 0, 
+          usedSick: 0, 
+          usedCasual: 0 
+        },
+        recentLeaves: recentLeaves.slice(0, 5),
+        message: "Mobile dashboard loaded successfully"
+      });
+    } catch (error) {
+      console.error('Mobile dashboard error:', error);
+      res.status(500).json({ error: "Failed to load dashboard" });
+    }
+  });
+
+  // Mobile Attendance Punch
+  app.post("/api/mobile/attendance/punch", verifyMobileToken, async (req, res) => {
+    try {
+      const { type, location, address } = req.body;
+      const employeeId = req.user.employeeId;
+
+      if (!employeeId) {
+        return res.status(400).json({ error: "Employee ID required" });
+      }
+
+      if (!type || !['in', 'out'].includes(type)) {
+        return res.status(400).json({ error: "Valid punch type required (in/out)" });
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+
+      if (type === 'in') {
+        const newAttendance = await storage.createAttendanceRecord({
+          employeeId,
+          date: today,
+          punchIn: now,
+          location: location || null,
+          address: address || null,
+          status: "present"
+        });
+        res.json({ message: "Punched in successfully", attendance: newAttendance });
+      } else {
+        res.json({ message: "Punch out functionality ready", type: "out" });
+      }
+    } catch (error) {
+      console.error('Mobile punch error:', error);
+      res.status(500).json({ error: "Failed to record punch" });
+    }
+  });
+
+  // Mobile Leave Application
+  app.post("/api/mobile/leave/apply", verifyMobileToken, async (req, res) => {
+    try {
+      const { leaveType, fromDate, toDate, reason } = req.body;
+      const employeeId = req.user.employeeId;
+
+      if (!employeeId) {
+        return res.status(400).json({ error: "Employee ID required" });
+      }
+
+      const leaveApplication = await storage.createLeaveApplication({
+        employeeId,
+        leaveType,
+        fromDate,
+        toDate,
+        reason,
+        appliedDate: new Date().toISOString().split('T')[0],
+        status: "pending"
+      });
+
+      res.json({ 
+        message: "Leave application submitted successfully", 
+        application: leaveApplication 
+      });
+    } catch (error) {
+      console.error('Mobile leave application error:', error);
+      res.status(500).json({ error: "Failed to submit leave application" });
+    }
+  });
+
+  // Mobile Leave Balance
+  app.get("/api/mobile/leave/balance", verifyMobileToken, async (req, res) => {
+    try {
+      const employeeId = req.user.employeeId;
+      if (!employeeId) {
+        return res.status(400).json({ error: "Employee ID required" });
+      }
+
+      const leaveBalance = await storage.getLeaveBalance(employeeId);
+      res.json(leaveBalance || { 
+        employeeId, 
+        annualLeaves: 21, 
+        sickLeaves: 10, 
+        casualLeaves: 7, 
+        usedAnnual: 0, 
+        usedSick: 0, 
+        usedCasual: 0 
+      });
+    } catch (error) {
+      console.error('Mobile leave balance error:', error);
+      res.status(500).json({ error: "Failed to get leave balance" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -72,7 +72,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("employee"), // admin, hr, manager, employee
-  companyId: varchar("company_id").references(() => companies.id),
+  companyId: varchar("company_id").references(() => companies.id).default("default-company"),
   employeeId: varchar("employee_id"),
   isActive: boolean("is_active").notNull().default(true),
   lastLogin: timestamp("last_login"),
