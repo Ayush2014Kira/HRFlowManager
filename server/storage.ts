@@ -51,6 +51,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserLastLogin(id: string): Promise<void>;
+  authenticateUser(username: string, password: string): Promise<User | null>;
   
   // Session methods
   createSession(session: InsertUserSession): Promise<UserSession>;
@@ -161,6 +162,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id));
   }
 
+  async authenticateUser(username: string, password: string): Promise<User | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user || !user.isActive) {
+      return null;
+    }
+    
+    // Simple password comparison (in production, use proper hashing)
+    const crypto = await import("crypto");
+    const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+    
+    if (user.password === hashedPassword) {
+      await this.updateUserLastLogin(user.id);
+      return user;
+    }
+    
+    return null;
+  }
+
   // Session methods
   async createSession(insertSession: InsertUserSession): Promise<UserSession> {
     const [session] = await db
@@ -187,9 +206,20 @@ export class DatabaseStorage implements IStorage {
   // Employee methods
   async getEmployees(): Promise<(Employee & { department: Department })[]> {
     return await db.select().from(employees)
-      .innerJoin(departments, eq(employees.departmentId, departments.id))
+      .leftJoin(departments, eq(employees.departmentId, departments.id))
       .where(eq(employees.isActive, true))
-      .then(rows => rows.map(row => ({ ...row.employees, department: row.departments })));
+      .then(rows => rows.map(row => ({ 
+        ...row.employees, 
+        department: row.departments || { 
+          id: 'no-dept', 
+          name: 'No Department', 
+          description: '',
+          managerId: null,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as Department
+      })));
   }
 
   async getEmployee(id: string): Promise<(Employee & { department: Department }) | undefined> {
