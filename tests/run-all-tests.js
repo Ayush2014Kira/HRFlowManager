@@ -6,6 +6,8 @@ import CryptoTester from './crypto.test.js';
 import ValidationTester from './validation.test.js';
 import ApiEndpointTester from './api-endpoints.test.js';
 import DatabaseTester from './database.test.js';
+import FrontendIntegrationTester from './frontend-integration.test.js';
+import SystemFlowTester from './system-flow.test.js';
 
 async function runAllTests() {
   console.log('🧪 Starting HRMS System Testing Suite');

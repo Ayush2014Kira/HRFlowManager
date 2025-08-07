@@ -17,6 +17,8 @@ import EmployeePortalPage from "@/pages/employee-portal";
 import FieldTrackingPage from "@/pages/field-tracking";
 import ReportsPage from "@/pages/reports";
 import AddEmployee from "@/pages/add-employee";
+import EmployeeView from "@/pages/employee-view";
+import EmployeeEdit from "@/pages/employee-edit";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -119,6 +121,8 @@ function Router() {
             <Route path="/" component={Dashboard} />
             <Route path="/employees" component={Employees} />
             <Route path="/add-employee" component={AddEmployee} />
+            <Route path="/employees/:id/view" component={EmployeeView} />
+            <Route path="/employees/:id/edit" component={EmployeeEdit} />
             <Route path="/attendance" component={Attendance} />
             <Route path="/leaves" component={Leaves} />
             <Route path="/payroll" component={Payroll} />

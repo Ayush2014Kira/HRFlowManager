@@ -43,7 +43,7 @@ import {
   type InsertEsslDevice
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, count, or, isNotNull, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -340,11 +340,20 @@ export class DatabaseStorage implements IStorage {
     const [existing] = await db.select().from(attendanceRecords)
       .where(and(eq(attendanceRecords.employeeId, employeeId), eq(attendanceRecords.date, today)));
 
-    if (existing && existing.punchIn) {
-      throw new Error('Already punched in today');
+    if (existing && existing.punchIn && !existing.punchOut) {
+      throw new Error('Already punched in today. Please punch out first.');
     }
 
     if (existing) {
+      // If already completed a full day (punched in and out), create a new entry for next shift
+      if (existing.punchIn && existing.punchOut) {
+        return await this.createAttendanceRecord({
+          employeeId,
+          date: today,
+          punchIn: now,
+          status: 'present'
+        });
+      }
       // Update existing record
       return await this.updateAttendanceRecord(existing.id, {
         punchIn: now,
@@ -365,15 +374,18 @@ export class DatabaseStorage implements IStorage {
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
 
+    // Get the most recent attendance record for today that has punch-in but no punch-out
     const [existing] = await db.select().from(attendanceRecords)
-      .where(and(eq(attendanceRecords.employeeId, employeeId), eq(attendanceRecords.date, today)));
+      .where(and(
+        eq(attendanceRecords.employeeId, employeeId), 
+        eq(attendanceRecords.date, today),
+        isNotNull(attendanceRecords.punchIn),
+        isNull(attendanceRecords.punchOut)
+      ))
+      .orderBy(desc(attendanceRecords.punchIn));
 
-    if (!existing || !existing.punchIn) {
-      throw new Error('Must punch in first');
-    }
-
-    if (existing.punchOut) {
-      throw new Error('Already punched out today');
+    if (!existing) {
+      throw new Error('Must punch in first or already punched out');
     }
 
     // Calculate working hours
