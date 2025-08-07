@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/table";
 import { Users, Search, Plus, Eye, Edit } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import type { EmployeeWithDepartment } from "@/lib/types";
 
 export default function Employees() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
 
   const { data: employees, isLoading } = useQuery<EmployeeWithDepartment[]>({
     queryKey: ["/api/employees"],
@@ -47,7 +49,7 @@ export default function Employees() {
         <h2 className="text-2xl font-semibold text-gray-900">Employee Management</h2>
         <Button 
           className="bg-primary hover:bg-blue-700 text-white"
-          onClick={() => window.location.href = "/add-employee"}
+          onClick={() => setLocation("/add-employee")}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Employee
@@ -109,10 +111,20 @@ export default function Employees() {
                     <TableCell>₹{Number(employee.salary).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setLocation(`/employees/${employee.id}/view`)}
+                          title="View Employee"
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setLocation(`/employees/${employee.id}/edit`)}
+                          title="Edit Employee"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </div>
