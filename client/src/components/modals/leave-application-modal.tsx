@@ -30,6 +30,10 @@ export default function LeaveApplicationModal({ isOpen, onClose }: LeaveApplicat
   const createLeaveApplication = useMutation({
     mutationFn: async (data: typeof formData) => {
       const response = await apiRequest("POST", "/api/leave-applications", data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit leave application");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -48,14 +52,22 @@ export default function LeaveApplicationModal({ isOpen, onClose }: LeaveApplicat
         employeeId: "emp-1"
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Leave application error:", error);
       toast({
-        title: "Error",
-        description: "Failed to submit leave application",
+        title: "Error", 
+        description: error.message || "Failed to submit leave application",
         variant: "destructive",
       });
     },
   });
+
+  const calculateTotalDays = (fromDate: string, toDate: string): number => {
+    if (!fromDate || !toDate) return 0;
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +79,16 @@ export default function LeaveApplicationModal({ isOpen, onClose }: LeaveApplicat
       });
       return;
     }
+
+    if (new Date(formData.fromDate) > new Date(formData.toDate)) {
+      toast({
+        title: "Error",
+        description: "From date cannot be later than to date",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createLeaveApplication.mutate(formData);
   };
 
@@ -105,6 +127,7 @@ export default function LeaveApplicationModal({ isOpen, onClose }: LeaveApplicat
                 type="date"
                 value={formData.fromDate}
                 onChange={(e) => handleInputChange("fromDate", e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
               />
             </div>
             <div>
@@ -114,9 +137,19 @@ export default function LeaveApplicationModal({ isOpen, onClose }: LeaveApplicat
                 type="date"
                 value={formData.toDate}
                 onChange={(e) => handleInputChange("toDate", e.target.value)}
+                min={formData.fromDate || new Date().toISOString().split('T')[0]}
               />
             </div>
           </div>
+          
+          {formData.fromDate && formData.toDate && (
+            <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-2">
+              <Info className="h-4 w-4 text-blue-600" />
+              <span className="text-sm text-blue-800">
+                Total days: {calculateTotalDays(formData.fromDate, formData.toDate)}
+              </span>
+            </div>
+          )}
           
           <div>
             <Label htmlFor="reason">Reason</Label>

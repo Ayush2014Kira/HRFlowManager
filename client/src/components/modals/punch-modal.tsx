@@ -23,20 +23,25 @@ export default function PunchModal({ isOpen, onClose }: PunchModalProps) {
       const response = await apiRequest("POST", "/api/attendance/punch-in", {
         employeeId: "emp-1" // This should come from auth context in real app
       });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to punch in");
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/attendance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      const punchTime = new Date(data.punchIn).toLocaleTimeString();
       toast({
-        title: "Success",
-        description: "Punched in successfully!",
+        title: "Punch In Successful",
+        description: `Punched in at ${punchTime}`,
       });
       onClose();
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: "Punch In Failed",
         description: error.message || "Failed to punch in",
         variant: "destructive",
       });
@@ -48,20 +53,26 @@ export default function PunchModal({ isOpen, onClose }: PunchModalProps) {
       const response = await apiRequest("POST", "/api/attendance/punch-out", {
         employeeId: "emp-1" // This should come from auth context in real app
       });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to punch out");
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/attendance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      const punchTime = new Date(data.punchOut).toLocaleTimeString();
+      const workingHours = data.workingHours || "0.00";
       toast({
-        title: "Success",
-        description: "Punched out successfully!",
+        title: "Punch Out Successful",
+        description: `Punched out at ${punchTime}. Worked ${workingHours} hours.`,
       });
       onClose();
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: "Punch Out Failed", 
         description: error.message || "Failed to punch out",
         variant: "destructive",
       });
