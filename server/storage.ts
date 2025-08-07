@@ -258,9 +258,25 @@ export class DatabaseStorage implements IStorage {
   // Leave Application methods
   async getLeaveApplications(): Promise<(LeaveApplication & { employee: Employee })[]> {
     return await db.select().from(leaveApplications)
-      .innerJoin(employees, eq(leaveApplications.employeeId, employees.id))
+      .leftJoin(employees, eq(leaveApplications.employeeId, employees.id))
       .orderBy(desc(leaveApplications.appliedAt))
-      .then(rows => rows.map(row => ({ ...row.leave_applications, employee: row.employees })));
+      .then(rows => rows.map(row => ({ 
+        ...row.leave_applications, 
+        employee: row.employees || { 
+          id: row.leave_applications.employeeId, 
+          name: 'Unknown Employee', 
+          employeeId: row.leave_applications.employeeId,
+          email: '',
+          phone: '',
+          departmentId: '',
+          position: '',
+          hireDate: '',
+          salary: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as Employee
+      })));
   }
 
   async getLeaveApplicationsByEmployee(employeeId: string): Promise<LeaveApplication[]> {
