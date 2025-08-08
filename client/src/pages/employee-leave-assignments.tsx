@@ -183,6 +183,17 @@ export default function EmployeeLeaveAssignmentsPage() {
     form.reset();
   };
 
+  const handleOpenDialog = () => {
+    setEditingAssignment(null);
+    form.reset({
+      employeeId: "",
+      leaveTypeId: "",
+      allocatedDays: 0,
+      year: new Date().getFullYear(),
+    });
+    setIsDialogOpen(true);
+  };
+
   const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   if (assignmentsLoading) {
@@ -209,9 +220,9 @@ export default function EmployeeLeaveAssignmentsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={handleOpenDialog}>
                 <Plus className="w-4 h-4 mr-2" />
                 Assign Leave
               </Button>

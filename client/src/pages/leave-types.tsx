@@ -162,6 +162,19 @@ export default function LeaveTypesPage() {
     form.reset();
   };
 
+  const handleOpenDialog = () => {
+    setEditingLeaveType(null);
+    form.reset({
+      name: "",
+      description: "",
+      maxDaysPerYear: 0,
+      carryForward: false,
+      carryForwardLimit: 0,
+      companyId: "default-company",
+    });
+    setIsDialogOpen(true);
+  };
+
   if (isLoading) {
     return <div className="flex items-center justify-center p-8">Loading...</div>;
   }
@@ -173,9 +186,9 @@ export default function LeaveTypesPage() {
           <h1 className="text-3xl font-bold">Leave Types</h1>
           <p className="text-muted-foreground">Manage custom leave types for your organization</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={handleOpenDialog}>
               <Plus className="w-4 h-4 mr-2" />
               Add Leave Type
             </Button>
