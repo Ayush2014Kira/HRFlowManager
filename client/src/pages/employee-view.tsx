@@ -109,12 +109,8 @@ export default function EmployeeView() {
               <p>{new Date(employee.joinDate).toLocaleDateString()}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Gender</label>
-              <p>{employee.gender || 'Not specified'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Date of Birth</label>
-              <p>{employee.dateOfBirth ? new Date(employee.dateOfBirth).toLocaleDateString() : 'Not specified'}</p>
+              <label className="text-sm font-medium text-gray-500">Employee Code</label>
+              <p>{employee.employeeId}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-500">Total Salary</label>
@@ -170,126 +166,54 @@ export default function EmployeeView() {
 
       {/* Additional Details in 2x2 Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Address Information */}
+        {/* Company Information */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center text-lg">
               <MapPin className="h-5 w-5 mr-2" />
-              Address Information
+              Additional Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-gray-500">Current Address</label>
-              <p>{employee.currentAddress || 'Not provided'}</p>
+              <label className="text-sm font-medium text-gray-500">Company ID</label>
+              <p>{employee.companyId}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Permanent Address</label>
-              <p>{employee.permanentAddress || 'Not provided'}</p>
+              <label className="text-sm font-medium text-gray-500">Department ID</label>
+              <p>{employee.departmentId}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">City</label>
-              <p>{employee.city || 'Not provided'}</p>
+              <label className="text-sm font-medium text-gray-500">Created At</label>
+              <p>{new Date(employee.createdAt).toLocaleDateString()}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">State</label>
-              <p>{employee.state || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">PIN Code</label>
-              <p>{employee.pinCode || 'Not provided'}</p>
+              <label className="text-sm font-medium text-gray-500">Updated At</label>
+              <p>{new Date(employee.updatedAt).toLocaleDateString()}</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Bank & Financial Information */}
+        {/* Financial Information */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center text-lg">
               <CreditCard className="h-5 w-5 mr-2" />
-              Bank & Financial Information
+              Financial Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-gray-500">Bank Name</label>
-              <p>{employee.bankName || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Account Number</label>
-              <p className="font-mono">{employee.accountNumber ? `****${employee.accountNumber.slice(-4)}` : 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">IFSC Code</label>
-              <p className="font-mono">{employee.ifscCode || 'Not provided'}</p>
+              <label className="text-sm font-medium text-gray-500">Salary</label>
+              <p>₹{Number(employee.salary).toLocaleString()}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-500">PF Number</label>
               <p className="font-mono">{employee.pfNumber || 'Not provided'}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">ESI Number</label>
-              <p className="font-mono">{employee.esiNumber || 'Not provided'}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Identity Documents */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center text-lg">
-              <FileText className="h-5 w-5 mr-2" />
-              Identity Documents
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Aadhar Number</label>
-              <p className="font-mono">{employee.aadharNumber ? `****${employee.aadharNumber.slice(-4)}` : 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">PAN Number</label>
-              <p className="font-mono">{employee.panNumber || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Driving License</label>
-              <p className="font-mono">{employee.drivingLicense || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Passport Number</label>
-              <p className="font-mono">{employee.passportNumber || 'Not provided'}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Emergency Contact */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center text-lg">
-              <Shield className="h-5 w-5 mr-2" />
-              Emergency Contact
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Emergency Contact Name</label>
-              <p>{employee.emergencyContactName || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Emergency Contact Phone</label>
-              <p>{employee.emergencyContactPhone || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Relationship</label>
-              <p>{employee.emergencyContactRelation || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Blood Group</label>
-              <p>{employee.bloodGroup || 'Not provided'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Medical Conditions</label>
-              <p>{employee.medicalConditions || 'None reported'}</p>
+              <label className="text-sm font-medium text-gray-500">eSSL Employee ID</label>
+              <p className="font-mono">{employee.esslEmployeeId || 'Not assigned'}</p>
             </div>
           </CardContent>
         </Card>

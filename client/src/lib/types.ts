@@ -7,19 +7,29 @@ export interface DashboardStats {
 
 export interface EmployeeWithDepartment {
   id: string;
+  companyId: string;
+  locationId?: string | null;
   employeeId: string;
+  esslEmployeeId?: string | null;
   name: string;
   email: string;
   phone?: string;
   designation: string;
+  departmentId: string;
   joinDate: string;
   salary: string;
-  pfNumber?: string;
+  pfNumber?: string | null;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
   department: {
     id: string;
     name: string;
-    code: string;
+    description?: string;
+    managerId?: string | null;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
   };
 }
 
