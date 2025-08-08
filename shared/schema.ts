@@ -508,3 +508,56 @@ export type EsslDevice = typeof esslDevices.$inferSelect;
 
 export type InsertRawPunchData = z.infer<typeof insertRawPunchDataSchema>;
 export type RawPunchData = typeof rawPunchData.$inferSelect;
+
+// Time Tracking tables
+export const timeEntries = pgTable("time_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull(),
+  projectName: varchar("project_name", { length: 200 }),
+  taskDescription: text("task_description"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  totalHours: decimal("total_hours", { precision: 5, scale: 2 }),
+  breakDuration: integer("break_duration").default(0), // in minutes
+  isActive: boolean("is_active").default(true),
+  category: varchar("category", { length: 50 }).default("work"), // work, break, meeting, etc
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const workSchedules = pgTable("work_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull(),
+  dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday, etc
+  startTime: varchar("start_time", { length: 8 }).notNull(), // HH:MM:SS format
+  endTime: varchar("end_time", { length: 8 }).notNull(),
+  breakDuration: integer("break_duration").default(60), // in minutes
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations for time tracking
+export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
+  employee: one(employees, {
+    fields: [timeEntries.employeeId],
+    references: [employees.id],
+  }),
+}));
+
+export const workSchedulesRelations = relations(workSchedules, ({ one }) => ({
+  employee: one(employees, {
+    fields: [workSchedules.employeeId],
+    references: [employees.id],
+  }),
+}));
+
+// Insert schemas for time tracking
+export const insertTimeEntrySchema = createInsertSchema(timeEntries);
+export const insertWorkScheduleSchema = createInsertSchema(workSchedules);
+
+// Types for time tracking
+export type TimeEntry = typeof timeEntries.$inferSelect;
+export type InsertTimeEntry = typeof timeEntries.$inferInsert;
+export type WorkSchedule = typeof workSchedules.$inferSelect;
+export type InsertWorkSchedule = typeof workSchedules.$inferInsert;

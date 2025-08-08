@@ -340,6 +340,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/employee-leave-assignments/bulk", requireAuth, async (req, res) => {
+    try {
+      const bulkAssignmentSchema = z.object({
+        employeeIds: z.array(z.string()).min(1, "At least one employee is required"),
+        leaveTypeId: z.string().min(1, "Leave type is required"),
+        allocatedDays: z.number().min(0, "Must be 0 or more"),
+        year: z.number().min(2020).max(2030),
+      });
+
+      const validatedData = bulkAssignmentSchema.parse(req.body);
+      const assignments = await storage.createBulkEmployeeLeaveAssignments(validatedData);
+      res.status(201).json(assignments);
+    } catch (error) {
+      console.error("Error creating bulk leave assignments:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Validation failed", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create bulk leave assignments" });
+      }
+    }
+  });
+
   app.put("/api/employee-leave-assignments/:id", requireAuth, async (req, res) => {
     try {
       const updates = req.body;
@@ -356,6 +378,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Employee leave assignment deleted successfully" });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete employee leave assignment" });
+    }
+  });
+
+  // Time Tracking routes
+  app.get("/api/time-entries", requireAuth, async (req, res) => {
+    try {
+      const employeeId = req.query.employeeId as string;
+      const date = req.query.date as string;
+      const entries = await storage.getTimeEntries(employeeId, date);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching time entries:", error);
+      res.status(500).json({ error: "Failed to fetch time entries" });
+    }
+  });
+
+  app.post("/api/time-entries", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertTimeEntrySchema.parse(req.body);
+      const entry = await storage.createTimeEntry(validatedData);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error creating time entry:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Validation failed", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create time entry" });
+      }
+    }
+  });
+
+  app.post("/api/time-entries/start", requireAuth, async (req, res) => {
+    try {
+      const { employeeId, ...data } = req.body;
+      const activeEntry = await storage.getActiveTimeEntry(employeeId);
+      
+      if (activeEntry) {
+        return res.status(400).json({ error: "Employee already has an active time entry" });
+      }
+      
+      const entry = await storage.startTimeEntry(employeeId, data);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error starting time entry:", error);
+      res.status(500).json({ error: "Failed to start time entry" });
+    }
+  });
+
+  app.put("/api/time-entries/:id/stop", requireAuth, async (req, res) => {
+    try {
+      const entry = await storage.stopTimeEntry(req.params.id);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error stopping time entry:", error);
+      res.status(500).json({ error: "Failed to stop time entry" });
+    }
+  });
+
+  app.put("/api/time-entries/:id", requireAuth, async (req, res) => {
+    try {
+      const updates = req.body;
+      const entry = await storage.updateTimeEntry(req.params.id, updates);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating time entry:", error);
+      res.status(500).json({ error: "Failed to update time entry" });
+    }
+  });
+
+  app.delete("/api/time-entries/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteTimeEntry(req.params.id);
+      res.json({ message: "Time entry deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting time entry:", error);
+      res.status(500).json({ error: "Failed to delete time entry" });
+    }
+  });
+
+  app.get("/api/time-entries/active/:employeeId", requireAuth, async (req, res) => {
+    try {
+      const entry = await storage.getActiveTimeEntry(req.params.employeeId);
+      res.json(entry || null);
+    } catch (error) {
+      console.error("Error fetching active time entry:", error);
+      res.status(500).json({ error: "Failed to fetch active time entry" });
+    }
+  });
+
+  app.get("/api/work-schedules", requireAuth, async (req, res) => {
+    try {
+      const employeeId = req.query.employeeId as string;
+      const schedules = await storage.getWorkSchedules(employeeId);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching work schedules:", error);
+      res.status(500).json({ error: "Failed to fetch work schedules" });
+    }
+  });
+
+  app.post("/api/work-schedules", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertWorkScheduleSchema.parse(req.body);
+      const schedule = await storage.createWorkSchedule(validatedData);
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Error creating work schedule:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Validation failed", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create work schedule" });
+      }
+    }
+  });
+
+  app.put("/api/work-schedules/:id", requireAuth, async (req, res) => {
+    try {
+      const updates = req.body;
+      const schedule = await storage.updateWorkSchedule(req.params.id, updates);
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error updating work schedule:", error);
+      res.status(500).json({ error: "Failed to update work schedule" });
+    }
+  });
+
+  app.delete("/api/work-schedules/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteWorkSchedule(req.params.id);
+      res.json({ message: "Work schedule deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting work schedule:", error);
+      res.status(500).json({ error: "Failed to delete work schedule" });
     }
   });
 

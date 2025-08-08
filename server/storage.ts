@@ -85,8 +85,27 @@ export interface IStorage {
   getEmployeeLeaveAssignments(employeeId?: string, year?: number): Promise<(EmployeeLeaveAssignment & { employee: Employee; leaveType: LeaveType })[]>;
   getEmployeeLeaveAssignment(employeeId: string, leaveTypeId: string, year: number): Promise<EmployeeLeaveAssignment | undefined>;
   createEmployeeLeaveAssignment(assignment: InsertEmployeeLeaveAssignment): Promise<EmployeeLeaveAssignment>;
+  createBulkEmployeeLeaveAssignments(data: {
+    employeeIds: string[];
+    leaveTypeId: string;
+    allocatedDays: number;
+    year: number;
+  }): Promise<EmployeeLeaveAssignment[]>;
   updateEmployeeLeaveAssignment(id: string, updates: Partial<InsertEmployeeLeaveAssignment>): Promise<EmployeeLeaveAssignment>;
   deleteEmployeeLeaveAssignment(id: string): Promise<void>;
+
+  // Time Tracking methods
+  getTimeEntries(employeeId?: string, date?: string): Promise<(TimeEntry & { employee: Employee })[]>;
+  createTimeEntry(data: InsertTimeEntry): Promise<TimeEntry>;
+  updateTimeEntry(id: string, updates: Partial<InsertTimeEntry>): Promise<TimeEntry>;
+  deleteTimeEntry(id: string): Promise<void>;
+  getActiveTimeEntry(employeeId: string): Promise<TimeEntry | undefined>;
+  startTimeEntry(employeeId: string, data: Partial<InsertTimeEntry>): Promise<TimeEntry>;
+  stopTimeEntry(id: string): Promise<TimeEntry>;
+  getWorkSchedules(employeeId?: string): Promise<WorkSchedule[]>;
+  createWorkSchedule(data: InsertWorkSchedule): Promise<WorkSchedule>;
+  updateWorkSchedule(id: string, updates: Partial<InsertWorkSchedule>): Promise<WorkSchedule>;
+  deleteWorkSchedule(id: string): Promise<void>;
 
   // Leave Balance methods
   getLeaveBalance(employeeId: string, year: number): Promise<LeaveBalance | undefined>;
@@ -378,10 +397,172 @@ export class DatabaseStorage implements IStorage {
     const [newAssignment] = await db.insert(employeeLeaveAssignments)
       .values({
         ...assignment,
-        remainingDays: assignment.allocatedDays - (assignment.usedDays || 0)
+        remainingDays: (assignment.allocatedDays || 0) - (assignment.usedDays || 0)
       })
       .returning();
     return newAssignment;
+  }
+
+  async createBulkEmployeeLeaveAssignments(data: {
+    employeeIds: string[];
+    leaveTypeId: string;
+    allocatedDays: number;
+    year: number;
+  }): Promise<EmployeeLeaveAssignment[]> {
+    const assignments = data.employeeIds.map(employeeId => ({
+      employeeId,
+      leaveTypeId: data.leaveTypeId,
+      allocatedDays: data.allocatedDays,
+      usedDays: 0,
+      remainingDays: data.allocatedDays,
+      year: data.year,
+    }));
+
+    const insertedAssignments = await db
+      .insert(employeeLeaveAssignments)
+      .values(assignments)
+      .returning();
+
+    return insertedAssignments;
+  }
+
+  // Time Tracking implementations
+  async getTimeEntries(employeeId?: string, date?: string): Promise<(TimeEntry & { employee: Employee })[]> {
+    let query = db.select({
+      ...getTableColumns(timeEntries),
+      employee: {
+        id: employees.id,
+        name: employees.name,
+        employeeId: employees.employeeId,
+        email: employees.email,
+        designation: employees.designation,
+      }
+    })
+    .from(timeEntries)
+    .leftJoin(employees, eq(timeEntries.employeeId, employees.id));
+
+    if (employeeId) {
+      query = query.where(eq(timeEntries.employeeId, employeeId));
+    }
+
+    if (date) {
+      const startDate = new Date(date);
+      const endDate = new Date(date);
+      endDate.setDate(endDate.getDate() + 1);
+      query = query.where(
+        and(
+          gte(timeEntries.startTime, startDate),
+          lt(timeEntries.startTime, endDate)
+        )
+      );
+    }
+
+    return await query.orderBy(desc(timeEntries.startTime));
+  }
+
+  async createTimeEntry(data: InsertTimeEntry): Promise<TimeEntry> {
+    const [entry] = await db.insert(timeEntries).values(data).returning();
+    return entry;
+  }
+
+  async updateTimeEntry(id: string, updates: Partial<InsertTimeEntry>): Promise<TimeEntry> {
+    const [entry] = await db
+      .update(timeEntries)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(timeEntries.id, id))
+      .returning();
+    return entry;
+  }
+
+  async deleteTimeEntry(id: string): Promise<void> {
+    await db.delete(timeEntries).where(eq(timeEntries.id, id));
+  }
+
+  async getActiveTimeEntry(employeeId: string): Promise<TimeEntry | undefined> {
+    const [entry] = await db
+      .select()
+      .from(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.employeeId, employeeId),
+          eq(timeEntries.isActive, true),
+          isNull(timeEntries.endTime)
+        )
+      )
+      .limit(1);
+    return entry;
+  }
+
+  async startTimeEntry(employeeId: string, data: Partial<InsertTimeEntry>): Promise<TimeEntry> {
+    const [entry] = await db
+      .insert(timeEntries)
+      .values({
+        employeeId,
+        startTime: new Date(),
+        isActive: true,
+        ...data,
+      })
+      .returning();
+    return entry;
+  }
+
+  async stopTimeEntry(id: string): Promise<TimeEntry> {
+    const endTime = new Date();
+    const [entry] = await db
+      .update(timeEntries)
+      .set({
+        endTime,
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(timeEntries.id, id))
+      .returning();
+
+    // Calculate total hours
+    const [currentEntry] = await db
+      .select()
+      .from(timeEntries)
+      .where(eq(timeEntries.id, id));
+
+    if (currentEntry && currentEntry.startTime) {
+      const diffMs = endTime.getTime() - currentEntry.startTime.getTime();
+      const totalHours = (diffMs / (1000 * 60 * 60)).toFixed(2);
+      
+      await db
+        .update(timeEntries)
+        .set({ totalHours })
+        .where(eq(timeEntries.id, id));
+    }
+
+    return entry;
+  }
+
+  async getWorkSchedules(employeeId?: string): Promise<WorkSchedule[]> {
+    let query = db.select().from(workSchedules);
+    
+    if (employeeId) {
+      query = query.where(eq(workSchedules.employeeId, employeeId));
+    }
+    
+    return await query.orderBy(workSchedules.dayOfWeek);
+  }
+
+  async createWorkSchedule(data: InsertWorkSchedule): Promise<WorkSchedule> {
+    const [schedule] = await db.insert(workSchedules).values(data).returning();
+    return schedule;
+  }
+
+  async updateWorkSchedule(id: string, updates: Partial<InsertWorkSchedule>): Promise<WorkSchedule> {
+    const [schedule] = await db
+      .update(workSchedules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(workSchedules.id, id))
+      .returning();
+    return schedule;
+  }
+
+  async deleteWorkSchedule(id: string): Promise<void> {
+    await db.delete(workSchedules).where(eq(workSchedules.id, id));
   }
 
   async updateEmployeeLeaveAssignment(id: string, updates: Partial<InsertEmployeeLeaveAssignment>): Promise<EmployeeLeaveAssignment> {

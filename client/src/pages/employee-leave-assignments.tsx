@@ -11,11 +11,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Edit, Trash2, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Users, UserPlus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 
 const assignmentSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
+  leaveTypeId: z.string().min(1, "Leave type is required"),
+  allocatedDays: z.number().min(0, "Must be 0 or more"),
+  year: z.number().min(2020).max(2030),
+});
+
+const bulkAssignmentSchema = z.object({
+  employeeIds: z.array(z.string()).min(1, "At least one employee is required"),
   leaveTypeId: z.string().min(1, "Leave type is required"),
   allocatedDays: z.number().min(0, "Must be 0 or more"),
   year: z.number().min(2020).max(2030),
@@ -52,14 +60,26 @@ type EmployeeLeaveAssignment = {
 
 export default function EmployeeLeaveAssignmentsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<EmployeeLeaveAssignment | null>(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof assignmentSchema>>({
     resolver: zodResolver(assignmentSchema),
     defaultValues: {
       employeeId: "",
+      leaveTypeId: "",
+      allocatedDays: 0,
+      year: new Date().getFullYear(),
+    },
+  });
+
+  const bulkForm = useForm<z.infer<typeof bulkAssignmentSchema>>({
+    resolver: zodResolver(bulkAssignmentSchema),
+    defaultValues: {
+      employeeIds: [],
       leaveTypeId: "",
       allocatedDays: 0,
       year: new Date().getFullYear(),
@@ -152,6 +172,32 @@ export default function EmployeeLeaveAssignmentsPage() {
     },
   });
 
+  const bulkAssignMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof bulkAssignmentSchema>) => {
+      return await apiRequest("/api/employee-leave-assignments/bulk", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-leave-assignments"] });
+      setIsBulkDialogOpen(false);
+      bulkForm.reset();
+      setSelectedEmployees([]);
+      toast({
+        title: "Success",
+        description: "Leave assignments created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create bulk leave assignments",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: z.infer<typeof assignmentSchema>) => {
     if (editingAssignment) {
       updateMutation.mutate(data);
@@ -194,6 +240,43 @@ export default function EmployeeLeaveAssignmentsPage() {
     setIsDialogOpen(true);
   };
 
+  const handleOpenBulkDialog = () => {
+    bulkForm.reset({
+      employeeIds: [],
+      leaveTypeId: "",
+      allocatedDays: 0,
+      year: new Date().getFullYear(),
+    });
+    setSelectedEmployees([]);
+    setIsBulkDialogOpen(true);
+  };
+
+  const onBulkSubmit = (data: z.infer<typeof bulkAssignmentSchema>) => {
+    bulkAssignMutation.mutate(data);
+  };
+
+  const handleEmployeeSelect = (employeeId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedEmployees(prev => [...prev, employeeId]);
+      bulkForm.setValue('employeeIds', [...selectedEmployees, employeeId]);
+    } else {
+      setSelectedEmployees(prev => prev.filter(id => id !== employeeId));
+      const newEmployees = selectedEmployees.filter(id => id !== employeeId);
+      bulkForm.setValue('employeeIds', newEmployees);
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && employees) {
+      const allEmployeeIds = employees.map(emp => emp.id);
+      setSelectedEmployees(allEmployeeIds);
+      bulkForm.setValue('employeeIds', allEmployeeIds);
+    } else {
+      setSelectedEmployees([]);
+      bulkForm.setValue('employeeIds', []);
+    }
+  };
+
   const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   if (assignmentsLoading) {
@@ -220,6 +303,137 @@ export default function EmployeeLeaveAssignmentsPage() {
               ))}
             </SelectContent>
           </Select>
+          <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" onClick={handleOpenBulkDialog}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Bulk Assign
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Bulk Assign Leave</DialogTitle>
+                <DialogDescription>
+                  Assign the same leave quota to multiple employees at once
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...bulkForm}>
+                <form onSubmit={bulkForm.handleSubmit(onBulkSubmit)} className="space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Select Employees</h4>
+                      <div className="border rounded-md p-3 max-h-48 overflow-y-auto">
+                        <div className="flex items-center space-x-2 mb-2 pb-2 border-b">
+                          <Checkbox
+                            id="select-all"
+                            checked={employees?.length === selectedEmployees.length && selectedEmployees.length > 0}
+                            onCheckedChange={handleSelectAll}
+                          />
+                          <label htmlFor="select-all" className="text-sm font-medium">
+                            Select All ({employees?.length || 0} employees)
+                          </label>
+                        </div>
+                        <div className="space-y-2">
+                          {employees?.map((employee) => (
+                            <div key={employee.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={employee.id}
+                                checked={selectedEmployees.includes(employee.id)}
+                                onCheckedChange={(checked) => handleEmployeeSelect(employee.id, checked as boolean)}
+                              />
+                              <label htmlFor={employee.id} className="text-sm">
+                                {employee.name} ({employee.employeeId}) - {employee.designation}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {selectedEmployees.length} employee(s) selected
+                      </p>
+                    </div>
+                    <FormField
+                      control={bulkForm.control}
+                      name="leaveTypeId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Leave Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a leave type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {leaveTypes?.map((leaveType) => (
+                                <SelectItem key={leaveType.id} value={leaveType.id}>
+                                  {leaveType.name} (Max: {leaveType.maxDaysPerYear} days)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={bulkForm.control}
+                      name="allocatedDays"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Allocated Days</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Number of days to allocate to all selected employees
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={bulkForm.control}
+                      name="year"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Year</FormLabel>
+                          <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value.toString()}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {years.map((year) => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button type="button" variant="outline" onClick={() => setIsBulkDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={bulkAssignMutation.isPending || selectedEmployees.length === 0}>
+                      Assign to {selectedEmployees.length} Employee(s)
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={handleOpenDialog}>

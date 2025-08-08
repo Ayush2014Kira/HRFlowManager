@@ -10,7 +10,8 @@ import {
   DollarSign, 
   CheckCircle, 
   BarChart3,
-  MapPin
+  MapPin,
+  Timer
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Employee Management", href: "/employees", icon: Users },
   { name: "Attendance & Punch", href: "/attendance", icon: Clock },
+  { name: "Time Tracking", href: "/time-tracking", icon: Timer },
   { name: "Leave Applications", href: "/leaves", icon: Calendar },
   { name: "Leave Types", href: "/leave-types", icon: Settings },
   { name: "Leave Assignments", href: "/employee-leave-assignments", icon: UserCheck },
