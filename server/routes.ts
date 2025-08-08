@@ -13,6 +13,8 @@ import {
   insertMissPunchRequestSchema,
   insertApprovalSchema,
   insertPayrollRecordSchema,
+  insertTimeEntrySchema,
+  insertWorkScheduleSchema,
 } from "@shared/schema";
 
 // Simple authentication middleware

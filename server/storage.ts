@@ -15,6 +15,8 @@ import {
   esslDevices,
   users,
   userSessions,
+  timeEntries,
+  workSchedules,
   type Employee, 
   type Department, 
   type LeaveBalance, 
@@ -27,6 +29,8 @@ import {
   type PayrollRecord,
   type User,
   type UserSession,
+  type TimeEntry,
+  type WorkSchedule,
   type InsertEmployee, 
   type InsertDepartment, 
   type InsertLeaveBalance, 
@@ -39,6 +43,8 @@ import {
   type InsertPayrollRecord,
   type InsertUser,
   type InsertUserSession,
+  type InsertTimeEntry,
+  type InsertWorkSchedule,
   type FieldWorkVisit,
   type InsertFieldWorkVisit,
   type Company,
@@ -49,7 +55,7 @@ import {
   type InsertEsslDevice
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, sql, count, or, isNotNull, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, lt, desc, sql, count, or, isNotNull, isNull, getTableColumns } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
