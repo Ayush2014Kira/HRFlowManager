@@ -94,17 +94,10 @@ export default function TimeTrackingPage() {
 
   const { data: timeEntries, isLoading } = useQuery<TimeEntry[]>({
     queryKey: ["/api/time-entries", { date: selectedDate, employeeId: selectedEmployeeId }],
-    queryFn: () => {
-      const params = new URLSearchParams();
-      if (selectedDate) params.append("date", selectedDate);
-      if (selectedEmployeeId) params.append("employeeId", selectedEmployeeId);
-      return apiRequest(`/api/time-entries?${params.toString()}`);
-    },
   });
 
   const { data: activeEntry } = useQuery<TimeEntry | null>({
-    queryKey: ["/api/time-entries/active", selectedEmployeeId],
-    queryFn: () => selectedEmployeeId ? apiRequest(`/api/time-entries/active/${selectedEmployeeId}`) : null,
+    queryKey: selectedEmployeeId ? [`/api/time-entries/active/${selectedEmployeeId}`] : [],
     enabled: !!selectedEmployeeId,
   });
 
