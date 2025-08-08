@@ -7,6 +7,8 @@ import {
   insertDepartmentSchema,
   insertEmployeeSchema,
   insertLeaveApplicationSchema,
+  insertLeaveTypeSchema,
+  insertEmployeeLeaveAssignmentSchema,
   insertAttendanceRecordSchema,
   insertMissPunchRequestSchema,
   insertApprovalSchema,
@@ -243,6 +245,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(application);
     } catch (error) {
       res.status(500).json({ error: "Failed to update leave application" });
+    }
+  });
+
+  // Leave Type routes
+  app.get("/api/leave-types", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.query.companyId as string;
+      const leaveTypes = await storage.getLeaveTypes(companyId);
+      res.json(leaveTypes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch leave types" });
+    }
+  });
+
+  app.get("/api/leave-types/:id", requireAuth, async (req, res) => {
+    try {
+      const leaveType = await storage.getLeaveType(req.params.id);
+      if (leaveType) {
+        res.json(leaveType);
+      } else {
+        res.status(404).json({ error: "Leave type not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch leave type" });
+    }
+  });
+
+  app.post("/api/leave-types", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertLeaveTypeSchema.parse(req.body);
+      const leaveType = await storage.createLeaveType(validatedData);
+      res.status(201).json(leaveType);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid leave type data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create leave type" });
+    }
+  });
+
+  app.put("/api/leave-types/:id", requireAuth, async (req, res) => {
+    try {
+      const updates = req.body;
+      const leaveType = await storage.updateLeaveType(req.params.id, updates);
+      res.json(leaveType);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update leave type" });
+    }
+  });
+
+  app.delete("/api/leave-types/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteLeaveType(req.params.id);
+      res.json({ message: "Leave type deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete leave type" });
+    }
+  });
+
+  // Employee Leave Assignment routes
+  app.get("/api/employee-leave-assignments", requireAuth, async (req, res) => {
+    try {
+      const employeeId = req.query.employeeId as string;
+      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      const assignments = await storage.getEmployeeLeaveAssignments(employeeId, year);
+      res.json(assignments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employee leave assignments" });
+    }
+  });
+
+  app.get("/api/employees/:employeeId/leave-assignments", requireAuth, async (req, res) => {
+    try {
+      const { employeeId } = req.params;
+      const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+      const assignments = await storage.getEmployeeLeaveAssignments(employeeId, year);
+      res.json(assignments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch employee leave assignments" });
+    }
+  });
+
+  app.post("/api/employee-leave-assignments", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertEmployeeLeaveAssignmentSchema.parse(req.body);
+      const assignment = await storage.createEmployeeLeaveAssignment(validatedData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid assignment data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create employee leave assignment" });
+    }
+  });
+
+  app.put("/api/employee-leave-assignments/:id", requireAuth, async (req, res) => {
+    try {
+      const updates = req.body;
+      const assignment = await storage.updateEmployeeLeaveAssignment(req.params.id, updates);
+      res.json(assignment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update employee leave assignment" });
+    }
+  });
+
+  app.delete("/api/employee-leave-assignments/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteEmployeeLeaveAssignment(req.params.id);
+      res.json({ message: "Employee leave assignment deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete employee leave assignment" });
     }
   });
 

@@ -4,7 +4,6 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const leaveTypeEnum = pgEnum('leave_type', ['annual', 'sick', 'casual', 'emergency']);
 export const leaveStatusEnum = pgEnum('leave_status', ['pending', 'approved', 'rejected']);
 export const attendanceStatusEnum = pgEnum('attendance_status', ['present', 'absent', 'on_leave']);
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected']);
@@ -115,7 +114,34 @@ export const employees = pgTable("employees", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// Leave balances table
+// Custom leave types table
+export const leaveTypes = pgTable("leave_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  maxDaysPerYear: integer("max_days_per_year").notNull().default(0),
+  carryForward: boolean("carry_forward").notNull().default(false),
+  carryForwardLimit: integer("carry_forward_limit").default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  companyId: varchar("company_id").references(() => companies.id).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Employee leave assignments table
+export const employeeLeaveAssignments = pgTable("employee_leave_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").references(() => employees.id).notNull(),
+  leaveTypeId: varchar("leave_type_id").references(() => leaveTypes.id).notNull(),
+  allocatedDays: integer("allocated_days").notNull().default(0),
+  usedDays: integer("used_days").notNull().default(0),
+  remainingDays: integer("remaining_days").notNull().default(0),
+  year: integer("year").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Leave balances table (keeping for backward compatibility)
 export const leaveBalances = pgTable("leave_balances", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   employeeId: varchar("employee_id").notNull(),
@@ -131,7 +157,8 @@ export const leaveBalances = pgTable("leave_balances", {
 export const leaveApplications = pgTable("leave_applications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   employeeId: varchar("employee_id").notNull(),
-  leaveType: leaveTypeEnum("leave_type").notNull(),
+  leaveTypeId: varchar("leave_type_id").references(() => leaveTypes.id),
+  leaveType: varchar("leave_type", { length: 50 }), // For backward compatibility
   fromDate: date("from_date").notNull(),
   toDate: date("to_date").notNull(),
   totalDays: integer("total_days").notNull(),
@@ -255,6 +282,7 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   }),
   leaveBalances: many(leaveBalances),
   leaveApplications: many(leaveApplications),
+  leaveAssignments: many(employeeLeaveAssignments),
   attendanceRecords: many(attendanceRecords),
   missPunchRequests: many(missPunchRequests),
   approvals: many(approvals),
@@ -268,10 +296,34 @@ export const leaveBalancesRelations = relations(leaveBalances, ({ one }) => ({
   }),
 }));
 
+export const leaveTypesRelations = relations(leaveTypes, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [leaveTypes.companyId],
+    references: [companies.id],
+  }),
+  employeeAssignments: many(employeeLeaveAssignments),
+  leaveApplications: many(leaveApplications),
+}));
+
+export const employeeLeaveAssignmentsRelations = relations(employeeLeaveAssignments, ({ one }) => ({
+  employee: one(employees, {
+    fields: [employeeLeaveAssignments.employeeId],
+    references: [employees.id],
+  }),
+  leaveType: one(leaveTypes, {
+    fields: [employeeLeaveAssignments.leaveTypeId],
+    references: [leaveTypes.id],
+  }),
+}));
+
 export const leaveApplicationsRelations = relations(leaveApplications, ({ one }) => ({
   employee: one(employees, {
     fields: [leaveApplications.employeeId],
     references: [employees.id],
+  }),
+  leaveTypeRef: one(leaveTypes, {
+    fields: [leaveApplications.leaveTypeId],
+    references: [leaveTypes.id],
   }),
 }));
 
@@ -332,6 +384,18 @@ export const insertEmployeeSchema = createInsertSchema(employees).omit({
 
 export const insertLeaveBalanceSchema = createInsertSchema(leaveBalances).omit({
   id: true,
+  updatedAt: true,
+});
+
+export const insertLeaveTypeSchema = createInsertSchema(leaveTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmployeeLeaveAssignmentSchema = createInsertSchema(employeeLeaveAssignments).omit({
+  id: true,
+  createdAt: true,
   updatedAt: true,
 });
 
@@ -408,6 +472,12 @@ export type Employee = typeof employees.$inferSelect;
 
 export type InsertLeaveBalance = z.infer<typeof insertLeaveBalanceSchema>;
 export type LeaveBalance = typeof leaveBalances.$inferSelect;
+
+export type InsertLeaveType = z.infer<typeof insertLeaveTypeSchema>;
+export type LeaveType = typeof leaveTypes.$inferSelect;
+
+export type InsertEmployeeLeaveAssignment = z.infer<typeof insertEmployeeLeaveAssignmentSchema>;
+export type EmployeeLeaveAssignment = typeof employeeLeaveAssignments.$inferSelect;
 
 export type InsertLeaveApplication = z.infer<typeof insertLeaveApplicationSchema>;
 export type LeaveApplication = typeof leaveApplications.$inferSelect;

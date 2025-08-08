@@ -19,6 +19,8 @@ import ReportsPage from "@/pages/reports";
 import AddEmployee from "@/pages/add-employee";
 import EmployeeView from "@/pages/employee-view";
 import EmployeeEdit from "@/pages/employee-edit";
+import LeaveTypes from "@/pages/leave-types";
+import EmployeeLeaveAssignments from "@/pages/employee-leave-assignments";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -125,6 +127,8 @@ function Router() {
             <Route path="/employees/:id/edit" component={EmployeeEdit} />
             <Route path="/attendance" component={Attendance} />
             <Route path="/leaves" component={Leaves} />
+            <Route path="/leave-types" component={LeaveTypes} />
+            <Route path="/employee-leave-assignments" component={EmployeeLeaveAssignments} />
             <Route path="/payroll" component={Payroll} />
             <Route path="/approvals" component={Approvals} />
             <Route path="/field-tracking" component={FieldTrackingPage} />

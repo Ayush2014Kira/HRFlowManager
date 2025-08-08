@@ -3,6 +3,8 @@ import {
   departments, 
   leaveBalances, 
   leaveApplications, 
+  leaveTypes,
+  employeeLeaveAssignments,
   attendanceRecords, 
   missPunchRequests, 
   approvals, 
@@ -17,6 +19,8 @@ import {
   type Department, 
   type LeaveBalance, 
   type LeaveApplication, 
+  type LeaveType,
+  type EmployeeLeaveAssignment,
   type AttendanceRecord, 
   type MissPunchRequest, 
   type Approval, 
@@ -27,6 +31,8 @@ import {
   type InsertDepartment, 
   type InsertLeaveBalance, 
   type InsertLeaveApplication, 
+  type InsertLeaveType,
+  type InsertEmployeeLeaveAssignment,
   type InsertAttendanceRecord, 
   type InsertMissPunchRequest, 
   type InsertApproval, 
@@ -67,6 +73,20 @@ export interface IStorage {
   // Department methods
   getDepartments(): Promise<Department[]>;
   createDepartment(department: InsertDepartment): Promise<Department>;
+
+  // Leave Type methods
+  getLeaveTypes(companyId?: string): Promise<LeaveType[]>;
+  getLeaveType(id: string): Promise<LeaveType | undefined>;
+  createLeaveType(leaveType: InsertLeaveType): Promise<LeaveType>;
+  updateLeaveType(id: string, updates: Partial<InsertLeaveType>): Promise<LeaveType>;
+  deleteLeaveType(id: string): Promise<void>;
+
+  // Employee Leave Assignment methods
+  getEmployeeLeaveAssignments(employeeId?: string, year?: number): Promise<(EmployeeLeaveAssignment & { employee: Employee; leaveType: LeaveType })[]>;
+  getEmployeeLeaveAssignment(employeeId: string, leaveTypeId: string, year: number): Promise<EmployeeLeaveAssignment | undefined>;
+  createEmployeeLeaveAssignment(assignment: InsertEmployeeLeaveAssignment): Promise<EmployeeLeaveAssignment>;
+  updateEmployeeLeaveAssignment(id: string, updates: Partial<InsertEmployeeLeaveAssignment>): Promise<EmployeeLeaveAssignment>;
+  deleteEmployeeLeaveAssignment(id: string): Promise<void>;
 
   // Leave Balance methods
   getLeaveBalance(employeeId: string, year: number): Promise<LeaveBalance | undefined>;
@@ -276,6 +296,117 @@ export class DatabaseStorage implements IStorage {
   async createDepartment(department: InsertDepartment): Promise<Department> {
     const [newDepartment] = await db.insert(departments).values(department).returning();
     return newDepartment;
+  }
+
+  // Leave Type methods
+  async getLeaveTypes(companyId?: string): Promise<LeaveType[]> {
+    const query = db.select().from(leaveTypes).where(eq(leaveTypes.isActive, true));
+    if (companyId) {
+      query.where(eq(leaveTypes.companyId, companyId));
+    }
+    return await query;
+  }
+
+  async getLeaveType(id: string): Promise<LeaveType | undefined> {
+    const [leaveType] = await db.select().from(leaveTypes).where(eq(leaveTypes.id, id));
+    return leaveType;
+  }
+
+  async createLeaveType(leaveType: InsertLeaveType): Promise<LeaveType> {
+    const [newLeaveType] = await db.insert(leaveTypes).values(leaveType).returning();
+    return newLeaveType;
+  }
+
+  async updateLeaveType(id: string, updates: Partial<InsertLeaveType>): Promise<LeaveType> {
+    const [updatedLeaveType] = await db.update(leaveTypes)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(leaveTypes.id, id))
+      .returning();
+    return updatedLeaveType;
+  }
+
+  async deleteLeaveType(id: string): Promise<void> {
+    await db.update(leaveTypes)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(leaveTypes.id, id));
+  }
+
+  // Employee Leave Assignment methods
+  async getEmployeeLeaveAssignments(employeeId?: string, year?: number): Promise<(EmployeeLeaveAssignment & { employee: Employee; leaveType: LeaveType })[]> {
+    let whereConditions: any[] = [];
+    
+    if (employeeId) {
+      whereConditions.push(eq(employeeLeaveAssignments.employeeId, employeeId));
+    }
+    if (year) {
+      whereConditions.push(eq(employeeLeaveAssignments.year, year));
+    }
+
+    return await db.select({
+      id: employeeLeaveAssignments.id,
+      employeeId: employeeLeaveAssignments.employeeId,
+      leaveTypeId: employeeLeaveAssignments.leaveTypeId,
+      allocatedDays: employeeLeaveAssignments.allocatedDays,
+      usedDays: employeeLeaveAssignments.usedDays,
+      remainingDays: employeeLeaveAssignments.remainingDays,
+      year: employeeLeaveAssignments.year,
+      createdAt: employeeLeaveAssignments.createdAt,
+      updatedAt: employeeLeaveAssignments.updatedAt,
+      employee: employees,
+      leaveType: leaveTypes
+    })
+    .from(employeeLeaveAssignments)
+    .leftJoin(employees, eq(employeeLeaveAssignments.employeeId, employees.id))
+    .leftJoin(leaveTypes, eq(employeeLeaveAssignments.leaveTypeId, leaveTypes.id))
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+  }
+
+  async getEmployeeLeaveAssignment(employeeId: string, leaveTypeId: string, year: number): Promise<EmployeeLeaveAssignment | undefined> {
+    const [assignment] = await db.select().from(employeeLeaveAssignments)
+      .where(and(
+        eq(employeeLeaveAssignments.employeeId, employeeId),
+        eq(employeeLeaveAssignments.leaveTypeId, leaveTypeId),
+        eq(employeeLeaveAssignments.year, year)
+      ));
+    return assignment;
+  }
+
+  async createEmployeeLeaveAssignment(assignment: InsertEmployeeLeaveAssignment): Promise<EmployeeLeaveAssignment> {
+    const [newAssignment] = await db.insert(employeeLeaveAssignments)
+      .values({
+        ...assignment,
+        remainingDays: assignment.allocatedDays - (assignment.usedDays || 0)
+      })
+      .returning();
+    return newAssignment;
+  }
+
+  async updateEmployeeLeaveAssignment(id: string, updates: Partial<InsertEmployeeLeaveAssignment>): Promise<EmployeeLeaveAssignment> {
+    const updateData: any = {
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    // Recalculate remaining days if allocated or used days are updated
+    if (updates.allocatedDays !== undefined || updates.usedDays !== undefined) {
+      const [current] = await db.select().from(employeeLeaveAssignments).where(eq(employeeLeaveAssignments.id, id));
+      const allocatedDays = updates.allocatedDays !== undefined ? updates.allocatedDays : current.allocatedDays;
+      const usedDays = updates.usedDays !== undefined ? updates.usedDays : current.usedDays;
+      updateData.remainingDays = allocatedDays - usedDays;
+    }
+
+    const [updatedAssignment] = await db.update(employeeLeaveAssignments)
+      .set(updateData)
+      .where(eq(employeeLeaveAssignments.id, id))
+      .returning();
+    return updatedAssignment;
+  }
+
+  async deleteEmployeeLeaveAssignment(id: string): Promise<void> {
+    await db.delete(employeeLeaveAssignments).where(eq(employeeLeaveAssignments.id, id));
   }
 
   // Leave Balance methods
