@@ -224,10 +224,23 @@ export class DatabaseStorage implements IStorage {
 
   async getEmployee(id: string): Promise<(Employee & { department: Department }) | undefined> {
     const [result] = await db.select().from(employees)
-      .innerJoin(departments, eq(employees.departmentId, departments.id))
+      .leftJoin(departments, eq(employees.departmentId, departments.id))
       .where(and(eq(employees.id, id), eq(employees.isActive, true)));
     
-    return result ? { ...result.employees, department: result.departments } : undefined;
+    if (!result) return undefined;
+    
+    return { 
+      ...result.employees, 
+      department: result.departments || { 
+        id: 'no-dept', 
+        name: 'No Department', 
+        description: '',
+        managerId: null,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as Department
+    };
   }
 
   async createEmployee(employee: InsertEmployee): Promise<Employee> {
