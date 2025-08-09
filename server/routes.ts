@@ -16,10 +16,58 @@ import {
   insertTimeEntrySchema,
   insertWorkScheduleSchema,
 } from "@shared/schema";
+import crypto from "crypto";
+
+// Initialize demo users
+async function initializeDemoUsers() {
+  try {
+    const existingAdmin = await storage.getUserByUsername("admin");
+    if (existingAdmin) return; // Already initialized
+
+    // Hash function for passwords
+    const hashPassword = (password: string) => {
+      return crypto.createHash('sha256').update(password).digest('hex');
+    };
+
+    // Create demo users with only required fields
+    const demoUsers = [
+      {
+        username: "admin",
+        password: hashPassword("admin123"),
+        role: "admin",
+        isActive: true
+      },
+      {
+        username: "sarah.johnson",
+        password: hashPassword("sarah123"),
+        role: "hr",
+        isActive: true
+      },
+      {
+        username: "john.smith",
+        password: hashPassword("john123"),
+        role: "employee",
+        isActive: true
+      }
+    ];
+
+    for (const userData of demoUsers) {
+      try {
+        await storage.createUser(userData);
+        console.log(`Created demo user: ${userData.username}`);
+      } catch (error) {
+        console.log(`Demo user ${userData.username} might already exist`);
+      }
+    }
+    console.log("Demo users initialized successfully");
+  } catch (error) {
+    console.error("Error initializing demo users:", error);
+  }
+}
 
 // Simple authentication middleware
 const requireAuth = (req: any, res: any, next: any) => {
-  if (req.session && req.session.userId) {
+  if (req.session && (req.session as any).userId) {
     next();
   } else {
     res.status(401).json({ error: "Not authenticated" });
@@ -27,6 +75,8 @@ const requireAuth = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize demo users on startup
+  await initializeDemoUsers();
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -46,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { username, password } = req.body;
       const user = await storage.authenticateUser(username, password);
       if (user) {
-        req.session.userId = user.id;
+        (req.session as any).userId = user.id;
         res.json({ user: { id: user.id, username: user.username, role: user.role, companyId: user.companyId } });
       } else {
         res.status(401).json({ error: "Invalid credentials" });
@@ -64,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/user", requireAuth, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.session.userId);
+      const user = await storage.getUser((req.session as any).userId);
       if (user) {
         res.json({ id: user.id, username: user.username, role: user.role, companyId: user.companyId });
       } else {
