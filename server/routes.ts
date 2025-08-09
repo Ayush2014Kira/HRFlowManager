@@ -59,9 +59,77 @@ async function initializeDemoUsers() {
         console.log(`Demo user ${userData.username} might already exist`);
       }
     }
-    console.log("Demo users initialized successfully");
+    // Create demo departments
+    try {
+      await storage.createDepartment({
+        name: "Human Resources",
+        code: "HR",
+      });
+      await storage.createDepartment({
+        name: "Engineering", 
+        code: "ENG",
+      });
+      await storage.createDepartment({
+        name: "Sales",
+        code: "SALES",
+      });
+    } catch (error) {
+      console.log("Demo departments might already exist");
+    }
+
+    // Create demo leave types
+    try {
+      await storage.createLeaveType({
+        companyId: "default-company",
+        name: "Annual Leave",
+        description: "Yearly vacation leave",
+        maxDaysPerYear: 21,
+        carryForward: true,
+        carryForwardLimit: 5,
+        paidLeave: true,
+        isActive: true
+      });
+      await storage.createLeaveType({
+        companyId: "default-company", 
+        name: "Sick Leave",
+        description: "Medical leave",
+        maxDaysPerYear: 12,
+        carryForward: false,
+        carryForwardLimit: 0,
+        paidLeave: true,
+        isActive: true
+      });
+      await storage.createLeaveType({
+        companyId: "default-company",
+        name: "Casual Leave",
+        description: "Personal leave",
+        maxDaysPerYear: 12,
+        carryForward: false,
+        carryForwardLimit: 0,
+        paidLeave: true,
+        isActive: true
+      });
+    } catch (error) {
+      console.log("Demo leave types might already exist");
+    }
+
+    // Call sample data creation
+    await createSampleDataAfterInit();
+
+    console.log("Demo users and data initialized successfully");
   } catch (error) {
     console.error("Error initializing demo users:", error);
+  }
+}
+
+// Create sample data after initial setup
+async function createSampleDataAfterInit() {
+  try {
+    // Import the sample data function
+    const { createSampleData } = await import("./createSampleData");
+    await createSampleData();
+  } catch (error) {
+    console.error("Error loading sample data:", error);
   }
 }
 

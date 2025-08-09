@@ -124,6 +124,32 @@ export default function EmployeeLeaveAssignmentsPage() {
     },
   });
 
+  const bulkCreateMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof bulkAssignmentSchema>) => {
+      return await apiRequest("/api/employee-leave-assignments/bulk", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-leave-assignments"] });
+      setIsBulkDialogOpen(false);
+      bulkForm.reset();
+      setSelectedEmployees([]);
+      toast({
+        title: "Success",
+        description: "Bulk leave assignments created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create bulk leave assignments",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (data: z.infer<typeof assignmentSchema>) => {
       return await apiRequest(`/api/employee-leave-assignments/${editingAssignment?.id}`, {
