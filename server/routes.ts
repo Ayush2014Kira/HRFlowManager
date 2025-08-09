@@ -300,8 +300,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const record = await storage.punchIn(employeeId);
-      res.json(record);
+      res.status(200).json(record);
     } catch (error) {
+      console.error("Punch in error:", error);
       res.status(400).json({ error: error instanceof Error ? error.message : "Failed to punch in" });
     }
   });
@@ -314,8 +315,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const record = await storage.punchOut(employeeId);
-      res.json(record);
+      res.status(200).json(record);
     } catch (error) {
+      console.error("Punch out error:", error);
       res.status(400).json({ error: error instanceof Error ? error.message : "Failed to punch out" });
     }
   });
