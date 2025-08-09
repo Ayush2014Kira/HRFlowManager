@@ -518,7 +518,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/time-entries", requireAuth, async (req, res) => {
     try {
-      const validatedData = insertTimeEntrySchema.parse(req.body);
+      // Convert string dates to Date objects
+      const data = {
+        ...req.body,
+        startTime: req.body.startTime ? new Date(req.body.startTime) : undefined,
+        endTime: req.body.endTime ? new Date(req.body.endTime) : undefined,
+      };
+      const validatedData = insertTimeEntrySchema.parse(data);
       const entry = await storage.createTimeEntry(validatedData);
       res.status(201).json(entry);
     } catch (error) {
