@@ -22,6 +22,7 @@ import EmployeeEdit from "@/pages/employee-edit";
 import LeaveTypes from "@/pages/leave-types";
 import EmployeeLeaveAssignments from "@/pages/employee-leave-assignments";
 import TimeTracking from "@/pages/time-tracking";
+import UserManagement from "@/pages/user-management";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -135,6 +136,7 @@ function Router() {
             <Route path="/approvals" component={Approvals} />
             <Route path="/field-tracking" component={FieldTrackingPage} />
             <Route path="/reports" component={ReportsPage} />
+            <Route path="/user-management" component={UserManagement} />
             <Route component={NotFound} />
           </Switch>
         </main>

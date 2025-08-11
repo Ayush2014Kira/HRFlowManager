@@ -47,7 +47,7 @@ export default function Approvals() {
   const queryClient = useQueryClient();
 
   const { data: approvals, isLoading } = useQuery<ApprovalWithEmployee[]>({
-    queryKey: ["/api/approvals"],
+    queryKey: ["/api/approvals/pending"],
   });
 
   const { data: leaveApplications } = useQuery<LeaveApplicationWithEmployee[]>({

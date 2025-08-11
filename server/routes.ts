@@ -720,6 +720,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create HTTP server
+  // Admin password reset functionality
+  app.put("/api/admin/reset-password/:userId", requireAuth, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser((req.session as any).userId);
+      
+      // Check if current user is admin
+      if (!currentUser || currentUser.role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can reset passwords" });
+      }
+
+      const { userId } = req.params;
+      const { newPassword } = req.body;
+
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters long" });
+      }
+
+      // Hash the new password
+      const hashedPassword = crypto.createHash('sha256').update(newPassword).digest('hex');
+      
+      const updatedUser = await storage.updateUser(userId, { 
+        password: hashedPassword,
+        updatedAt: new Date().toISOString()
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Password reset successfully",
+        userId: updatedUser.id 
+      });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
+  // Get all users (admin only)
+  app.get("/api/admin/users", requireAuth, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser((req.session as any).userId);
+      
+      if (!currentUser || currentUser.role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can view all users" });
+      }
+
+      const users = await storage.getAllUsers();
+      // Don't send passwords in response
+      const safeUsers = users.map(user => ({
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        companyId: user.companyId,
+        isActive: user.isActive,
+        createdAt: user.createdAt
+      }));
+      
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

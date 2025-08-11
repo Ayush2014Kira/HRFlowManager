@@ -11,7 +11,8 @@ import {
   CheckCircle, 
   BarChart3,
   MapPin,
-  Timer
+  Timer,
+  Shield
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Leave Assignments", href: "/employee-leave-assignments", icon: UserCheck },
   { name: "Payroll & Salary", href: "/payroll", icon: DollarSign },
   { name: "Approvals", href: "/approvals", icon: CheckCircle },
+  { name: "User Management", href: "/user-management", icon: Shield },
   { name: "Field Tracking", href: "/field-tracking", icon: MapPin },
   { name: "Reports", href: "/reports", icon: BarChart3 },
 ];
