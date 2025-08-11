@@ -10,12 +10,12 @@ async function createDemoUsers() {
       return crypto.createHash('sha256').update(password).digest('hex');
     };
 
-    // Check if users already exist
-    const existingAdmin = await storage.getUserByUsername("admin");
-    if (existingAdmin) {
-      console.log("Demo users already exist");
-      return;
-    }
+    // Check if users already exist (remove this check to allow recreation)
+    // const existingAdmin = await storage.getUserByUsername("admin");
+    // if (existingAdmin) {
+    //   console.log("Demo users already exist");
+    //   return;
+    // }
 
     // Create departments first
     const departments = [
@@ -124,8 +124,7 @@ async function createDemoUsers() {
   }
 }
 
-if (require.main === module) {
-  createDemoUsers().then(() => process.exit(0));
-}
+// Run if called directly
+createDemoUsers().then(() => process.exit(0));
 
 export { createDemoUsers };
