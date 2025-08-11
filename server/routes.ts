@@ -86,7 +86,6 @@ async function initializeDemoUsers() {
         maxDaysPerYear: 21,
         carryForward: true,
         carryForwardLimit: 5,
-        paidLeave: true,
         isActive: true
       });
       await storage.createLeaveType({
@@ -96,7 +95,6 @@ async function initializeDemoUsers() {
         maxDaysPerYear: 12,
         carryForward: false,
         carryForwardLimit: 0,
-        paidLeave: true,
         isActive: true
       });
       await storage.createLeaveType({
@@ -106,7 +104,6 @@ async function initializeDemoUsers() {
         maxDaysPerYear: 12,
         carryForward: false,
         carryForwardLimit: 0,
-        paidLeave: true,
         isActive: true
       });
     } catch (error) {
@@ -741,8 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = crypto.createHash('sha256').update(newPassword).digest('hex');
       
       const updatedUser = await storage.updateUser(userId, { 
-        password: hashedPassword,
-        updatedAt: new Date().toISOString()
+        password: hashedPassword
       });
 
       res.json({ 
@@ -771,9 +767,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: user.id,
         username: user.username,
         role: user.role,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
         companyId: user.companyId,
         isActive: user.isActive,
         createdAt: user.createdAt

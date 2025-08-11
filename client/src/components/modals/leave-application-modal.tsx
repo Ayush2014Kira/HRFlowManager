@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Info } from "lucide-react";
@@ -16,25 +16,39 @@ interface LeaveApplicationModalProps {
 }
 
 export default function LeaveApplicationModal({ isOpen, onClose }: LeaveApplicationModalProps) {
+  // Get current user information
+  const { data: currentUser } = useQuery<{ id: string; employeeId?: string; username: string; role: string }>({
+    queryKey: ["/api/auth/user"],
+    enabled: isOpen
+  });
+
   const [formData, setFormData] = useState({
     leaveType: "",
     fromDate: "",
     toDate: "",
     reason: "",
-    employeeId: "emp-1" // This should come from auth context in real app
+    employeeId: ""
   });
+
+  // Update employeeId when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        employeeId: currentUser.employeeId || currentUser.id || "emp-1"
+      }));
+    }
+  }, [currentUser]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const createLeaveApplication = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await apiRequest("POST", "/api/leave-applications", data);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to submit leave application");
-      }
-      return response.json();
+      return await apiRequest("/api/leave-applications", {
+        method: "POST",
+        body: JSON.stringify(data)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leave-applications"] });
@@ -49,7 +63,7 @@ export default function LeaveApplicationModal({ isOpen, onClose }: LeaveApplicat
         fromDate: "",
         toDate: "",
         reason: "",
-        employeeId: "emp-1"
+        employeeId: currentUser?.employeeId || currentUser?.id || "emp-1"
       });
     },
     onError: (error: any) => {
