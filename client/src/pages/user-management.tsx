@@ -54,8 +54,9 @@ export default function UserManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: users, isLoading } = useQuery<User[]>({
+  const { data: users, isLoading, error, refetch } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
+    retry: 2
   });
 
   const passwordResetForm = useForm<PasswordResetForm>({
@@ -88,6 +89,31 @@ export default function UserManagement() {
       toast({
         title: "Error",
         description: error.message || "Failed to reset password",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+      return await apiRequest(`/api/admin/user-status/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          isActive,
+        })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User status updated successfully!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user status",
         variant: "destructive",
       });
     },
@@ -240,7 +266,21 @@ export default function UserManagement() {
                     </div>
                   </TableCell>
                   <TableCell>{getRoleBadge(user.role)}</TableCell>
-                  <TableCell>{getStatusBadge(user.isActive)}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant={user.isActive ? "destructive" : "default"}
+                      size="sm"
+                      onClick={() => toggleUserStatusMutation.mutate({ 
+                        userId: user.id, 
+                        isActive: !user.isActive 
+                      })}
+                      disabled={toggleUserStatusMutation.isPending}
+                      className="mr-2"
+                    >
+                      {user.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                    {getStatusBadge(user.isActive)}
+                  </TableCell>
                   <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <Button

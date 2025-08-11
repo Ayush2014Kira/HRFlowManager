@@ -14,6 +14,7 @@ import {
 import { CalendarPlus, Search, Calendar, Users } from "lucide-react";
 import { useState } from "react";
 import LeaveApplicationModal from "@/components/modals/leave-application-modal";
+import HRLeaveEntryModal from "@/components/modals/hr-leave-entry-modal";
 import PageHeader from "@/components/layout/page-header";
 import LoadingState from "@/components/layout/loading-state";
 import ErrorState from "@/components/layout/error-state";
@@ -22,6 +23,11 @@ import type { LeaveApplicationWithEmployee } from "@/lib/types";
 export default function Leaves() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const [isHRLeaveEntryOpen, setIsHRLeaveEntryOpen] = useState(false);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/user"],
+  });
 
   const { data: leaveApplications, isLoading } = useQuery<LeaveApplicationWithEmployee[]>({
     queryKey: ["/api/leave-applications"],
@@ -70,13 +76,24 @@ export default function Leaves() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-900">Leave Management</h2>
-        <Button 
-          onClick={() => setIsLeaveModalOpen(true)}
-          className="bg-primary hover:bg-blue-700 text-white"
-        >
-          <CalendarPlus className="h-4 w-4 mr-2" />
-          Apply Leave
-        </Button>
+        <div className="flex gap-2">
+          {currentUser?.role === 'admin' || currentUser?.role === 'hr' ? (
+            <Button 
+              onClick={() => setIsHRLeaveEntryOpen(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Users className="h-4 w-4" />
+              HR Manual Entry
+            </Button>
+          ) : null}
+          <Button 
+            onClick={() => setIsLeaveModalOpen(true)}
+            className="bg-primary hover:bg-blue-700 text-white"
+          >
+            <CalendarPlus className="h-4 w-4 mr-2" />
+            Apply Leave
+          </Button>
       </div>
 
       {/* Leave Summary Cards */}
@@ -239,10 +256,14 @@ export default function Leaves() {
         </CardContent>
       </Card>
 
-      {/* Leave Application Modal */}
       <LeaveApplicationModal 
         isOpen={isLeaveModalOpen} 
         onClose={() => setIsLeaveModalOpen(false)} 
+      />
+      
+      <HRLeaveEntryModal 
+        isOpen={isHRLeaveEntryOpen}
+        onClose={() => setIsHRLeaveEntryOpen(false)}
       />
     </div>
   );

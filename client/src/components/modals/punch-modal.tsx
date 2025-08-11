@@ -61,16 +61,12 @@ export default function PunchModal({ isOpen, onClose }: PunchModalProps) {
           employeeId: currentUser?.employeeId || currentUser?.id || "emp-1"
         })
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to punch out");
-      }
-      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance/today"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      const punchTime = new Date(data.punchOut).toLocaleTimeString();
+      const punchTime = data.punchOut ? new Date(data.punchOut).toLocaleTimeString() : currentTime;
       const workingHours = data.workingHours || "0.00";
       toast({
         title: "Punch Out Successful",

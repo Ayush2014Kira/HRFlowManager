@@ -716,7 +716,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create HTTP server
+  // HR Manual Leave Entry
+  app.post("/api/hr/manual-leave-entry", requireAuth, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser((req.session as any).userId);
+      
+      if (!currentUser || !['admin', 'hr'].includes(currentUser.role)) {
+        return res.status(403).json({ error: "Only HR or admin can create manual leave entries" });
+      }
+
+      const { employeeId, leaveType, fromDate, toDate, reason, totalDays } = req.body;
+
+      const leaveApplication = await storage.createLeaveApplication({
+        employeeId,
+        leaveType: leaveType || 'sick',
+        fromDate,
+        toDate,
+        totalDays: parseInt(totalDays) || 1,
+        reason: reason || 'Manual entry by HR',
+        status: 'approved', // Auto-approve HR entries
+        appliedAt: new Date()
+      });
+
+      res.status(201).json(leaveApplication);
+    } catch (error) {
+      console.error("Error creating manual leave entry:", error);
+      res.status(500).json({ error: "Failed to create leave entry" });
+    }
+  });
+
+  // User status update functionality
+  app.put("/api/admin/user-status/:userId", requireAuth, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser((req.session as any).userId);
+      
+      if (!currentUser || currentUser.role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can update user status" });
+      }
+
+      const { userId } = req.params;
+      const { isActive } = req.body;
+
+      const updatedUser = await storage.updateUser(userId, { 
+        isActive: isActive 
+      });
+
+      res.json({ 
+        success: true, 
+        message: "User status updated successfully",
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          isActive: updatedUser.isActive
+        }
+      });
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ error: "Failed to update user status" });
+    }
+  });
+
   // Admin password reset functionality
   app.put("/api/admin/reset-password/:userId", requireAuth, async (req: any, res) => {
     try {
