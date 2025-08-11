@@ -18,6 +18,9 @@ import { useState } from "react";
 import LeaveApplicationModal from "@/components/modals/leave-application-modal";
 import PunchModal from "@/components/modals/punch-modal";
 import MissPunchModal from "@/components/modals/miss-punch-modal";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 import type { DashboardStats, EmployeeWithDepartment, AttendanceWithEmployee, ApprovalWithEmployee } from "@/lib/types";
 
 export default function Dashboard() {
@@ -25,8 +28,9 @@ export default function Dashboard() {
   const [isPunchModalOpen, setIsPunchModalOpen] = useState(false);
   const [isMissPunchModalOpen, setIsMissPunchModalOpen] = useState(false);
 
-  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
+    retry: 2
   });
 
   const { data: employees } = useQuery<EmployeeWithDepartment[]>({
@@ -46,15 +50,24 @@ export default function Dashboard() {
   const onLeaveCount = todayAttendance?.filter(a => a.status === 'on_leave').length || 0;
 
   if (statsLoading) {
-    return <div className="flex items-center justify-center h-full">Loading...</div>;
+    return <LoadingState message="Loading dashboard data..." />;
+  }
+
+  if (statsError) {
+    return <ErrorState message="Failed to load dashboard data" onRetry={refetchStats} />;
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Title */}
-      <div>
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Dashboard Overview</h2>
-      </div>
+      <PageHeader 
+        title="Dashboard Overview" 
+        subtitle="Monitor your organization's key metrics at a glance"
+      >
+        <Button onClick={() => setIsPunchModalOpen(true)} className="bg-green-600 hover:bg-green-700">
+          <Clock className="h-4 w-4 mr-2" />
+          Quick Punch
+        </Button>
+      </PageHeader>
 
       {/* Dashboard Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

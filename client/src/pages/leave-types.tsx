@@ -13,6 +13,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 
 const leaveTypeSchema = z.object({
   name: z.string().min(1, "Name is required"),

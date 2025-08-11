@@ -14,6 +14,9 @@ import { z } from "zod";
 import { Plus, Edit, Trash2, Users, UserPlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 
 const assignmentSchema = z.object({
   employeeId: z.string().min(1, "Employee is required"),

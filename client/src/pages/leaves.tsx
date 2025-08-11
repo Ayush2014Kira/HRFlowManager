@@ -14,6 +14,9 @@ import {
 import { CalendarPlus, Search, Calendar, Users } from "lucide-react";
 import { useState } from "react";
 import LeaveApplicationModal from "@/components/modals/leave-application-modal";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 import type { LeaveApplicationWithEmployee } from "@/lib/types";
 
 export default function Leaves() {

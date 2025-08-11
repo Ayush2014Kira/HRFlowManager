@@ -11,10 +11,19 @@ export default function Header() {
 
   const pendingCount = Array.isArray(pendingApprovals) ? pendingApprovals.length : 0;
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    setLocation("/login");
-    window.location.reload();
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { 
+        method: "POST", 
+        credentials: "include" 
+      });
+      setLocation("/login");
+      window.location.reload();
+    } catch (error) {
+      console.error("Logout error:", error);
+      setLocation("/login");
+      window.location.reload();
+    }
   };
 
   return (

@@ -14,14 +14,18 @@ import {
 import { Users, Search, Plus, Eye, Edit } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 import type { EmployeeWithDepartment } from "@/lib/types";
 
 export default function Employees() {
   const [searchQuery, setSearchQuery] = useState("");
   const [, setLocation] = useLocation();
 
-  const { data: employees, isLoading } = useQuery<EmployeeWithDepartment[]>({
+  const { data: employees, isLoading, error, refetch } = useQuery<EmployeeWithDepartment[]>({
     queryKey: ["/api/employees"],
+    retry: 2
   });
 
   const filteredEmployees = employees?.filter(employee =>
@@ -39,14 +43,19 @@ export default function Employees() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full">Loading employees...</div>;
+    return <LoadingState message="Loading employees..." />;
+  }
+
+  if (error) {
+    return <ErrorState message="Failed to load employees" onRetry={refetch} />;
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-gray-900">Employee Management</h2>
+      <PageHeader 
+        title="Employee Management" 
+        subtitle={`Manage ${employees?.length || 0} employees across your organization`}
+      >
         <Button 
           className="bg-primary hover:bg-blue-700 text-white"
           onClick={() => setLocation("/add-employee")}
@@ -54,7 +63,7 @@ export default function Employees() {
           <Plus className="h-4 w-4 mr-2" />
           Add Employee
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Search and Filters */}
       <Card>

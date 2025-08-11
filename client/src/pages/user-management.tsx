@@ -18,6 +18,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Users, UserPlus, Settings, Key, Search, Shield, Mail } from "lucide-react";
 import { useState } from "react";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -65,10 +68,12 @@ export default function UserManagement() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
-      const response = await apiRequest("PUT", `/api/admin/reset-password/${userId}`, {
-        newPassword,
+      return await apiRequest(`/api/admin/reset-password/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          newPassword,
+        })
       });
-      return response.json();
     },
     onSuccess: (data) => {
       toast({

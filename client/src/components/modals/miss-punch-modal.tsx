@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -15,12 +15,18 @@ interface MissPunchModalProps {
 }
 
 export default function MissPunchModal({ isOpen, onClose }: MissPunchModalProps) {
+  // Get current user information
+  const { data: currentUser } = useQuery<{ id: string; employeeId?: string; username: string; role: string }>({
+    queryKey: ["/api/auth/user"],
+    enabled: isOpen
+  });
+
   const [formData, setFormData] = useState({
     date: "",
     punchType: "",
     requestedTime: "",
     reason: "",
-    employeeId: "emp-1" // This should come from auth context in real app
+    employeeId: ""
   });
 
   const { toast } = useToast();
@@ -31,10 +37,13 @@ export default function MissPunchModal({ isOpen, onClose }: MissPunchModalProps)
       const requestedDateTime = new Date(`${data.date}T${data.requestedTime}`);
       const payload = {
         ...data,
+        employeeId: currentUser?.employeeId || currentUser?.id || "emp-1",
         requestedTime: requestedDateTime.toISOString()
       };
-      const response = await apiRequest("POST", "/api/miss-punch-requests", payload);
-      return response.json();
+      return await apiRequest("/api/miss-punch-requests", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/miss-punch-requests"] });
@@ -49,7 +58,7 @@ export default function MissPunchModal({ isOpen, onClose }: MissPunchModalProps)
         punchType: "",
         requestedTime: "",
         reason: "",
-        employeeId: "emp-1"
+        employeeId: ""
       });
     },
     onError: (error) => {

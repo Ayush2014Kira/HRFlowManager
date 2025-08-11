@@ -14,6 +14,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DollarSign, Search, Download, Users, Calculator, Clock, FileText } from "lucide-react";
 import { useState } from "react";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 import type { EmployeeWithDepartment } from "@/lib/types";
 
 interface PayrollRecord {

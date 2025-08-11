@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Clock, LogIn, LogOut } from "lucide-react";
@@ -15,24 +15,29 @@ export default function PunchModal({ isOpen, onClose }: PunchModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Get current user information
+  const { data: currentUser } = useQuery<{ id: string; employeeId?: string; username: string; role: string }>({
+    queryKey: ["/api/auth/user"],
+    enabled: isOpen
+  });
+  
   const currentTime = new Date().toLocaleTimeString();
   const currentDate = new Date().toLocaleDateString();
 
   const punchInMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/attendance/punch-in", {
-        employeeId: "emp-1" // This should come from auth context in real app
+      return await apiRequest("/api/attendance/punch-in", {
+        method: "POST",
+        body: JSON.stringify({
+          employeeId: currentUser?.employeeId || currentUser?.id || "emp-1"
+        })
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to punch in");
-      }
-      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance/today"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      const punchTime = new Date(data.punchIn).toLocaleTimeString();
+      const punchTime = data.punchIn ? new Date(data.punchIn).toLocaleTimeString() : currentTime;
       toast({
         title: "Punch In Successful",
         description: `Punched in at ${punchTime}`,
@@ -50,8 +55,11 @@ export default function PunchModal({ isOpen, onClose }: PunchModalProps) {
 
   const punchOutMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/attendance/punch-out", {
-        employeeId: "emp-1" // This should come from auth context in real app
+      return await apiRequest("/api/attendance/punch-out", {
+        method: "POST",
+        body: JSON.stringify({
+          employeeId: currentUser?.employeeId || currentUser?.id || "emp-1"
+        })
       });
       if (!response.ok) {
         const errorData = await response.json();

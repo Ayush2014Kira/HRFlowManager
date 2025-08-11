@@ -14,6 +14,9 @@ import {
 import { Clock, Calendar, Search, Users } from "lucide-react";
 import { useState } from "react";
 import PunchModal from "@/components/modals/punch-modal";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 import type { AttendanceWithEmployee } from "@/lib/types";
 
 export default function Attendance() {
@@ -21,8 +24,9 @@ export default function Attendance() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isPunchModalOpen, setIsPunchModalOpen] = useState(false);
 
-  const { data: attendanceRecords, isLoading } = useQuery<AttendanceWithEmployee[]>({
+  const { data: attendanceRecords, isLoading, error, refetch } = useQuery<AttendanceWithEmployee[]>({
     queryKey: ["/api/attendance", { date: selectedDate }],
+    retry: 2
   });
 
   const filteredRecords = attendanceRecords?.filter(record =>
@@ -62,14 +66,19 @@ export default function Attendance() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full">Loading attendance records...</div>;
+    return <LoadingState message="Loading attendance records..." />;
+  }
+
+  if (error) {
+    return <ErrorState message="Failed to load attendance records" onRetry={refetch} />;
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-gray-900">Attendance & Time Tracking</h2>
+      <PageHeader 
+        title="Attendance & Time Tracking" 
+        subtitle={`View and manage attendance for ${filteredRecords.length} records on ${new Date(selectedDate).toLocaleDateString()}`}
+      >
         <Button 
           onClick={() => setIsPunchModalOpen(true)}
           className="bg-primary hover:bg-blue-700 text-white"
@@ -77,7 +86,7 @@ export default function Attendance() {
           <Clock className="h-4 w-4 mr-2" />
           Punch In/Out
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Attendance Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

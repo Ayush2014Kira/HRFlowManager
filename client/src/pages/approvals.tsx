@@ -18,6 +18,9 @@ import { CheckCircle, XCircle, Search, Clock, Users, Calendar, AlertTriangle, Me
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import PageHeader from "@/components/layout/page-header";
+import LoadingState from "@/components/layout/loading-state";
+import ErrorState from "@/components/layout/error-state";
 import type { ApprovalWithEmployee, LeaveApplicationWithEmployee } from "@/lib/types";
 
 interface MissPunchRequestWithEmployee {
@@ -60,12 +63,14 @@ export default function Approvals() {
 
   const updateApprovalMutation = useMutation({
     mutationFn: async ({ id, status, comments }: { id: string; status: 'approved' | 'rejected'; comments?: string }) => {
-      const response = await apiRequest("PUT", `/api/approvals/${id}`, {
-        status,
-        comments,
-        updatedAt: new Date().toISOString()
+      return await apiRequest(`/api/approvals/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          status,
+          comments,
+          updatedAt: new Date().toISOString()
+        })
       });
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
