@@ -653,14 +653,21 @@ export class DatabaseStorage implements IStorage {
   async createLeaveApplication(leaveApplication: InsertLeaveApplication): Promise<LeaveApplication> {
     const [newApplication] = await db.insert(leaveApplications).values(leaveApplication).returning();
     
-    // Create approval record for manager
-    await this.createApproval({
-      employeeId: leaveApplication.employeeId,
-      approverId: leaveApplication.employeeId, // This should be set to manager's ID in real implementation
-      type: 'leave',
-      referenceId: newApplication.id,
-      level: 1
-    });
+    // Create approval record for manager - find first admin/hr user as approver
+    const [approver] = await db.select().from(users)
+      .where(or(eq(users.role, 'admin'), eq(users.role, 'hr')))
+      .limit(1);
+    
+    if (approver) {
+      await this.createApproval({
+        employeeId: leaveApplication.employeeId,
+        approverId: approver.id,
+        type: 'leave',
+        referenceId: newApplication.id,
+        level: 1,
+        status: 'pending'
+      });
+    }
 
     return newApplication;
   }
@@ -793,14 +800,21 @@ export class DatabaseStorage implements IStorage {
   async createMissPunchRequest(request: InsertMissPunchRequest): Promise<MissPunchRequest> {
     const [newRequest] = await db.insert(missPunchRequests).values(request).returning();
     
-    // Create approval record
-    await this.createApproval({
-      employeeId: request.employeeId,
-      approverId: request.employeeId, // This should be set to manager's ID in real implementation
-      type: 'miss_punch',
-      referenceId: newRequest.id,
-      level: 1
-    });
+    // Create approval record - find first admin/hr user as approver
+    const [approver] = await db.select().from(users)
+      .where(or(eq(users.role, 'admin'), eq(users.role, 'hr')))
+      .limit(1);
+    
+    if (approver) {
+      await this.createApproval({
+        employeeId: request.employeeId,
+        approverId: approver.id,
+        type: 'miss_punch',
+        referenceId: newRequest.id,
+        level: 1,
+        status: 'pending'
+      });
+    }
 
     return newRequest;
   }
